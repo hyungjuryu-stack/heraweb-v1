@@ -1,4 +1,3 @@
-
 export enum StudentStatus {
   ENROLLED = '재원',
   CONSULTING = '상담',
@@ -70,12 +69,12 @@ export interface LessonRecord {
   testScore2: string | null;
   testScore3: string | null;
   homework: HomeworkGrade;
-  attitude: '매우 좋음' | '보통' | '부족';
+  attitude: '매우 좋음' | '보통' | '안좋음';
   notes: string;
-  requested_test?: string;
-  main_textbook?: string;
-  supplementary_textbook?: string;
-  reinforcement_textbook?: string;
+  requested_test: string;
+  main_textbook: string;
+  supplementary_textbook: string;
+  reinforcement_textbook: string;
 }
 
 export interface MonthlyReport {

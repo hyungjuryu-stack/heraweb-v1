@@ -1,10 +1,10 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Class, Student, Teacher, LessonRecord, HomeworkGrade, User } from '../types';
 import { KakaoTalkIcon } from '../components/Icons';
 
 // --- Type Definitions ---
 type DailyRecordData = Omit<LessonRecord, 'id' | 'date' | 'studentId'>;
+type NotificationStatus = 'idle' | 'sending' | 'resending' | 'sent' | 'failed';
 const homeworkGrades: HomeworkGrade[] = ['A', 'B', 'C', 'D', 'F'];
 
 // --- Helper Components ---
@@ -103,7 +103,7 @@ const AttendanceRecordEdit: React.FC<{
         <div className="absolute inset-0 bg-[#0d211c] p-1 z-10 border-2 border-yellow-500 rounded-md text-xs flex flex-col space-y-1">
             <div className="grid grid-cols-3 gap-1">
                 <select value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}><option>출석</option><option>지각</option><option>결석</option></select>
-                <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}><option>매우 좋음</option><option>보통</option><option>부족</option></select>
+                <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}><option>매우 좋음</option><option>보통</option><option>안좋음</option></select>
                 <select value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
             </div>
             <div className="grid grid-cols-3 gap-1">
@@ -138,27 +138,51 @@ const NotificationPreviewModal: React.FC<{
     const dateString = date.toISOString().split('T')[0];
     const poorHomeworkGrades: HomeworkGrade[] = ['C', 'D', 'F'];
 
-    const studentsToNotify = studentsInClass.map(student => {
+    const studentsToReport = studentsInClass.map(student => {
         const record = recordsMap.get(`${student.id}-${dateString}`);
-        const issues: string[] = [];
-        if (record) {
+        const details: string[] = [];
+        let hasSomethingToReport = false;
+
+        if (!record) {
+            // If there's no record, we can assume absence for notification purposes
+            details.push('결석');
+            hasSomethingToReport = true;
+        } else {
+            // Attendance issues are a reason to report
             if (record.attendance === '지각' || record.attendance === '결석') {
-                issues.push(record.attendance);
+                details.push(record.attendance);
+                hasSomethingToReport = true;
             }
-            if (record.attitude === '부족') {
-                issues.push('수업태도 부족');
+
+            // Attitude or homework issues are a reason to report
+            if (record.attitude === '안좋음') {
+                details.push('수업태도 안좋음');
+                hasSomethingToReport = true;
             }
             if (poorHomeworkGrades.includes(record.homework)) {
-                issues.push(`과제 미흡(${record.homework})`);
+                details.push(`과제 미흡(${record.homework})`);
+                hasSomethingToReport = true;
+            }
+
+            // Having test scores is always a reason to report
+            const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
+            if (scores.length > 0) {
+                // If reporting only for scores, also mention attendance status for context
+                if (!hasSomethingToReport && record.attendance === '출석') {
+                    details.push(record.attendance);
+                }
+                details.push(`테스트: ${scores.join(', ')}`);
+                hasSomethingToReport = true;
             }
         }
-        return { student, issues };
-    }).filter(item => item.issues.length > 0);
+
+        return { student, details, hasSomethingToReport };
+    }).filter(item => item.hasSomethingToReport);
     
     const allStudentsAttendanceSummary = studentsInClass.reduce(
         (acc, student) => {
             const record = recordsMap.get(`${student.id}-${dateString}`);
-            const status = record?.attendance || '결석';
+            const status = record?.attendance || '결석'; // Default to absent if no record
             if (status === '출석') acc.present++;
             else if (status === '지각') acc.late++;
             else if (status === '결석') acc.absent++;
@@ -185,9 +209,9 @@ const NotificationPreviewModal: React.FC<{
                         </h4>
                     </div>
                     <div className="bg-white p-3 rounded space-y-1 text-sm">
-                       {studentsToNotify.length > 0 ? (
-                            studentsToNotify.map(({ student, issues }) => (
-                                <p key={student.id}>- {student.name}: {issues.join(', ')}</p>
+                       {studentsToReport.length > 0 ? (
+                            studentsToReport.map(({ student, details }) => (
+                                <p key={student.id}>- {student.name}: {details.join(', ')}</p>
                             ))
                        ) : (
                            <p>전원 출석 및 특이사항 없음.</p>
@@ -229,9 +253,8 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
   const [editingCell, setEditingCell] = useState<{ studentId: number; date: string } | null>(null);
-  const [sentNotifications, setSentNotifications] = useState<Record<string, { sent: boolean, sending: boolean }>>({});
+  const [sentNotifications, setSentNotifications] = useState<Record<string, NotificationStatus>>({});
   const [notificationPreviewDate, setNotificationPreviewDate] = useState<Date | null>(null);
-  const [resendingKey, setResendingKey] = useState<string | null>(null);
 
   const canEdit = user.role === 'admin' || user.role === 'operator';
 
@@ -294,7 +317,7 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
     const simToday = new Date(2025, 8, 15);
     simToday.setHours(0, 0, 0, 0); // Normalize to start of day
 
-    const notificationsToUpdate: Record<string, { sent: boolean; sending: boolean }> = {};
+    const notificationsToUpdate: Record<string, NotificationStatus> = {};
     
     classDaysInMonth.forEach(date => {
         const classDate = new Date(date);
@@ -302,11 +325,16 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
 
         if (classDate < simToday) {
             const key = `${classDate.toISOString().split('T')[0]}-${selectedClassId}`;
-            notificationsToUpdate[key] = { sent: true, sending: false };
+            // Initialize status for past dates if not already set
+             if (!sentNotifications[key]) {
+                notificationsToUpdate[key] = Math.random() > 0.1 ? 'sent' : 'failed'; // 10% failure rate
+             }
         }
     });
 
-    setSentNotifications(prev => ({ ...prev, ...notificationsToUpdate }));
+    if (Object.keys(notificationsToUpdate).length > 0) {
+        setSentNotifications(prev => ({ ...prev, ...notificationsToUpdate }));
+    }
   }, [classDaysInMonth, selectedClassId]);
   
   const notificationTriggers = useMemo(() => {
@@ -318,10 +346,12 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
           const hasTrigger = studentsInClass.some(student => {
               const record = recordsMap.get(`${student.id}-${dateString}`);
               if (!record) return false;
+              const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
               return record.attendance === '지각' ||
                      record.attendance === '결석' ||
-                     record.attitude === '부족' ||
-                     poorHomeworkGrades.includes(record.homework);
+                     record.attitude === '안좋음' ||
+                     poorHomeworkGrades.includes(record.homework) ||
+                     scores.length > 0;
           });
           triggers[dateString] = hasTrigger;
       });
@@ -341,24 +371,31 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
     setEditingCell(null);
   };
 
-  const handleSendNotification = (date: Date, isResend = false) => {
+  const handleSendOrRetry = (date: Date) => {
     if (!selectedClassId) return;
     const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
-    if (sentNotifications[key]?.sent && !isResend) return;
     
-    if (isResend) {
-        setResendingKey(key);
-    }
-
-    setSentNotifications(prev => ({ ...prev, [key]: { ...prev[key], sending: true } }));
+    setSentNotifications(prev => ({ ...prev, [key]: 'sending' }));
+    
     setTimeout(() => {
-        setSentNotifications(prev => ({ ...prev, [key]: { sent: true, sending: false } }));
-        if (isResend) {
-            setResendingKey(null);
-            alert('알림톡을 재발송했습니다.');
-        }
+        // Simulate 20% failure rate for initial send/retry
+        const isSuccess = Math.random() >= 0.2;
+        setSentNotifications(prev => ({ ...prev, [key]: isSuccess ? 'sent' : 'failed' }));
     }, 1000);
   };
+
+  const handleResend = (date: Date) => {
+    if (!selectedClassId) return;
+    const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
+    
+    setSentNotifications(prev => ({ ...prev, [key]: 'resending' }));
+    
+    setTimeout(() => {
+        // Resend always succeeds
+        setSentNotifications(prev => ({ ...prev, [key]: 'sent' }));
+    }, 1000);
+  };
+
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -437,43 +474,69 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
                     {classDaysInMonth.map(date => {
                         const dateString = date.toISOString().split('T')[0];
                         const key = `${dateString}-${selectedClassId}`;
-                        const status = sentNotifications[key];
-                        const isSent = status?.sent;
-                        const isSending = status?.sending;
+                        const status = sentNotifications[key] || 'idle';
                         const needsNotification = notificationTriggers[dateString];
-                        const isResending = resendingKey === key;
+
+                        let content;
+
+                        if (status === 'sending' || status === 'resending') {
+                            content = (
+                                <button disabled className="w-full text-xs px-2 py-1.5 rounded bg-gray-700 text-gray-400 cursor-not-allowed flex items-center justify-center">
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    {status === 'resending' ? '재발송 중...' : '전송 중...'}
+                                </button>
+                            );
+                        } else if (status === 'sent') {
+                            content = (
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="font-semibold text-green-400">발송완료</span>
+                                    <div className="flex w-full gap-1">
+                                        <button onClick={() => setNotificationPreviewDate(date)} className="flex-1 text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">
+                                            내용
+                                        </button>
+                                        <button 
+                                            onClick={() => {
+                                                if (window.confirm('이미 발송된 알림입니다. 다시 보내시겠습니까?')) {
+                                                    handleResend(date);
+                                                }
+                                            }}
+                                            className="flex-1 text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white"
+                                        >
+                                            재발송
+                                        </button>
+                                    </div>
+                                </div>
+                            );
+                        } else if (status === 'failed') {
+                            content = (
+                                <div className="flex flex-col items-center gap-1">
+                                    <span className="font-semibold text-red-400">발송실패</span>
+                                    <button 
+                                        onClick={() => handleSendOrRetry(date)} 
+                                        className="w-full text-xs px-2 py-1.5 rounded bg-red-600 hover:bg-red-500 text-white font-bold"
+                                    >
+                                        재시도
+                                    </button>
+                                </div>
+                            );
+                        } else { // 'idle' state
+                            content = (
+                                <button 
+                                    onClick={() => handleSendOrRetry(date)} 
+                                    disabled={!needsNotification}
+                                    className="w-full text-xs px-2 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
+                                >
+                                    {needsNotification ? '발송' : '발송 대상 없음'}
+                                </button>
+                            );
+                        }
 
                         return (
                              <td key={date.toISOString()} className="p-2 align-middle text-center border-r border-gray-600">
-                                {isSent ? (
-                                    <div className="flex flex-col items-center gap-1">
-                                        <span className="font-semibold text-green-400">발송완료</span>
-                                        <div className="flex w-full gap-1">
-                                            <button onClick={() => setNotificationPreviewDate(date)} className="flex-1 text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">
-                                                내용보기
-                                            </button>
-                                            <button 
-                                                onClick={() => {
-                                                    if (window.confirm('이미 발송된 알림입니다. 다시 보내시겠습니까?')) {
-                                                        handleSendNotification(date, true);
-                                                    }
-                                                }}
-                                                disabled={isResending}
-                                                className="flex-1 text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700 disabled:cursor-not-allowed"
-                                            >
-                                                {isResending ? '재발송 중...' : '재발송'}
-                                            </button>
-                                        </div>
-                                    </div>
-                                ) : (
-                                    <button 
-                                        onClick={() => handleSendNotification(date)} 
-                                        disabled={isSending || !needsNotification}
-                                        className="w-full text-xs px-2 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
-                                    >
-                                        {isSending ? '전송중...' : (needsNotification ? '발송' : '발송 대상 없음')}
-                                    </button>
-                                )}
+                                {content}
                             </td>
                         )
                     })}

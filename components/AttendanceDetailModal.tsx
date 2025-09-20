@@ -27,6 +27,7 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
     homework: 'A',
     attitude: '보통',
     notes: '',
+    requested_test: '',
     main_textbook: '',
     supplementary_textbook: '',
     reinforcement_textbook: '',
@@ -84,6 +85,9 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
 
   if (!isOpen) return null;
   
+  const commonInputClass = "w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500";
+  const commonSelectClass = `${commonInputClass} appearance-none`;
+
   return (
     <div className="fixed inset-0 z-40" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="attendance-modal-title">
       <div
@@ -96,43 +100,57 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
           <h3 id="attendance-modal-title" className="text-lg font-bold text-[#E5A823]">{studentName} - {date}</h3>
         </div>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div>
-            <label htmlFor="attendance-status" className="block text-sm font-medium text-gray-300 mb-1">출결</label>
-            <select id="attendance-status" value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
-                <option value="출석">출석</option>
-                <option value="지각">지각</option>
-                <option value="결석">결석</option>
-            </select>
+          <div className="grid grid-cols-3 gap-2">
+            <div>
+              <label htmlFor="attendance-status" className="block text-xs font-medium text-gray-300 mb-1">출결</label>
+              <select id="attendance-status" value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}>
+                  <option value="출석">출석</option>
+                  <option value="지각">지각</option>
+                  <option value="결석">결석</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="attitude" className="block text-xs font-medium text-gray-300 mb-1">태도</label>
+              <select id="attitude" value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}>
+                  <option>매우 좋음</option>
+                  <option>보통</option>
+                  <option>안좋음</option>
+              </select>
+            </div>
+            <div>
+              <label htmlFor="homework" className="block text-xs font-medium text-gray-300 mb-1">과제</label>
+              <select id="homework" value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>
+                  {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
           </div>
           <div>
-            <label htmlFor="test-score1" className="block text-sm font-medium text-gray-300 mb-1">테스트 점수 1</label>
-            <input id="test-score1" type="text" value={formData.testScore1 ?? ''} onChange={e => handleChange('testScore1', e.target.value === '' ? null : e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
-          </div>
-           <div>
-            <label htmlFor="test-score2" className="block text-sm font-medium text-gray-300 mb-1">테스트 점수 2</label>
-            <input id="test-score2" type="text" value={formData.testScore2 ?? ''} onChange={e => handleChange('testScore2', e.target.value === '' ? null : e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
-          </div>
-           <div>
-            <label htmlFor="test-score3" className="block text-sm font-medium text-gray-300 mb-1">테스트 점수 3</label>
-            <input id="test-score3" type="text" value={formData.testScore3 ?? ''} onChange={e => handleChange('testScore3', e.target.value === '' ? null : e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
+            <label className="block text-sm font-medium text-gray-300 mb-1">테스트 점수</label>
+            <div className="grid grid-cols-3 gap-2">
+              <input type="text" placeholder="점수1" value={formData.testScore1 ?? ''} onChange={e => handleChange('testScore1', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+              <input type="text" placeholder="점수2" value={formData.testScore2 ?? ''} onChange={e => handleChange('testScore2', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+              <input type="text" placeholder="점수3" value={formData.testScore3 ?? ''} onChange={e => handleChange('testScore3', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+            </div>
           </div>
           <div>
-            <label htmlFor="attitude" className="block text-sm font-medium text-gray-300 mb-1">수업 태도</label>
-             <select id="attitude" value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
-                <option>매우 좋음</option>
-                <option>보통</option>
-                <option>부족</option>
-            </select>
+            <label htmlFor="main_textbook" className="block text-sm font-medium text-gray-300 mb-1">본교재</label>
+            <input id="main_textbook" type="text" value={formData.main_textbook} onChange={e => handleChange('main_textbook', e.target.value)} className={commonInputClass} />
           </div>
           <div>
-            <label htmlFor="homework" className="block text-sm font-medium text-gray-300 mb-1">과제</label>
-            <select id="homework" value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
-                {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
-            </select>
+            <label htmlFor="supplementary_textbook" className="block text-sm font-medium text-gray-300 mb-1">부교재</label>
+            <input id="supplementary_textbook" type="text" value={formData.supplementary_textbook} onChange={e => handleChange('supplementary_textbook', e.target.value)} className={commonInputClass} />
+          </div>
+          <div>
+            <label htmlFor="reinforcement_textbook" className="block text-sm font-medium text-gray-300 mb-1">보강교재</label>
+            <input id="reinforcement_textbook" type="text" value={formData.reinforcement_textbook} onChange={e => handleChange('reinforcement_textbook', e.target.value)} className={commonInputClass} />
+          </div>
+          <div>
+            <label htmlFor="requested_test" className="block text-sm font-medium text-gray-300 mb-1">준비요청</label>
+            <input id="requested_test" type="text" value={formData.requested_test} onChange={e => handleChange('requested_test', e.target.value)} className={commonInputClass} />
           </div>
           <div>
             <label htmlFor="notes" className="block text-sm font-medium text-gray-300 mb-1">비고</label>
-            <textarea id="notes" value={formData.notes} onChange={e => handleChange('notes', e.target.value)} rows={3} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
+            <textarea id="notes" value={formData.notes} onChange={e => handleChange('notes', e.target.value)} rows={2} className={commonInputClass} />
           </div>
         </div>
         <div className="px-6 py-4 flex justify-end space-x-4 border-t border-gray-700/50">

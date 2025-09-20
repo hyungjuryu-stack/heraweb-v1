@@ -85,10 +85,16 @@ export const generateTest = async (grade: string, unit: string, numQuestions: nu
 
 export const generateStudentReview = async (student: Student, studentRecords: LessonRecord[], teacherName: string | null): Promise<string> => {
   try {
-    const recordsSummary = studentRecords.length > 0
-      ? `최근 수업 기록 요약:\n` + studentRecords.slice(-5).map(r => 
-          `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework}), 노트: ${r.notes || '없음'}`
-        ).join('\n')
+    const recordsSummary = studentRecords.length > 0 // Get the last 5 records
+      ? `최근 수업 기록 요약:\n` + studentRecords.slice(-5).map(r => {
+          const tests = [r.testScore1, r.testScore2, r.testScore3].filter(Boolean).join(', ');
+          const textbooks = [r.main_textbook, r.supplementary_textbook, r.reinforcement_textbook].filter(Boolean).join(' / ');
+          return `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework})`
+            + (tests ? `, 테스트(${tests})` : '')
+            + (textbooks ? `, 교재(${textbooks})` : '')
+            + (r.notes ? `, 노트: ${r.notes}` : '')
+            + (r.requested_test ? `, 요청사항(${r.requested_test})` : '');
+        }).join('\n')
       : "최근 수업 기록이 없습니다.";
 
     const prompt = `
@@ -114,7 +120,7 @@ export const generateStudentReview = async (student: Student, studentRecords: Le
           - 평균 점수의 변화나 특정 테스트 결과가 있다면 긍정적으로 언급해줘.
 
       2.  **강점 및 보완점 (2-3문장):**
-          - 수업 기록, 테스트 결과 등을 종합하여 학생의 강점(예: 특정 단원 이해도, 문제 해결 능력)과 보완이 필요한 점을 부드럽게 설명해줘.
+          - 수업 기록(교재 진도, 테스트 결과 등), 테스트 결과 등을 종합하여 학생의 강점(예: 특정 단원 이해도, 문제 해결 능력)과 보완이 필요한 점을 부드럽게 설명해줘.
           - "특히, 함수 단원에서 높은 이해도를 보이며 응용 문제 해결 능력이 뛰어납니다. 다만, 서술형 문제에서 풀이 과정을 생략하는 경향이 있어 이 부분을 보완하면 더욱 좋은 결과를 얻을 수 있을 것입니다." 와 같이 구체적인 예시를 들어줘.
 
       3.  **향후 학원 지도 계획 (1-2문장):**

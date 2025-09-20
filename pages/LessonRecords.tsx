@@ -106,9 +106,13 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
         { key: 'date', label: '날짜' },
         { key: 'studentId', label: '학생' },
         { key: 'attendance', label: '출결' },
-        { key: 'testScore1', label: '테스트 점수' },
+        { key: 'attitude', label: '태도' },
         { key: 'homework', label: '과제' },
-        { key: 'attitude', label: '수업 태도' },
+        { key: 'testScore1', label: '테스트(1/2/3)' },
+        { key: 'main_textbook', label: '본교재' },
+        { key: 'supplementary_textbook', label: '부교재' },
+        { key: 'reinforcement_textbook', label: '보강교재' },
+        { key: 'requested_test', label: '준비요청' },
         { key: 'notes', label: '비고' },
     ];
 
@@ -186,10 +190,16 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.date}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{studentMap.get(record.studentId)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm"><AttendanceBadge status={record.attendance} /></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.testScore1 ?? '-'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homework}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.attitude}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-xs">{record.notes}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homework}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={[record.testScore1, record.testScore2, record.testScore3].filter(Boolean).join(' / ')}>
+                                {[record.testScore1, record.testScore2, record.testScore3].filter(Boolean).join(' / ') || '-'}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={record.main_textbook}>{record.main_textbook || '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={record.supplementary_textbook}>{record.supplementary_textbook || '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={record.reinforcement_textbook}>{record.reinforcement_textbook || '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={record.requested_test}>{record.requested_test || '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={record.notes}>{record.notes || '-'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button className="text-yellow-400 hover:text-yellow-300">수정</button>
                             </td>

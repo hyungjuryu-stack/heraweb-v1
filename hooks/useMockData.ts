@@ -213,7 +213,7 @@ const createInitialData = () => {
                         testScore2: createScore(),
                         testScore3: createScore(),
                         homework: getRandom(homeworkGrades), 
-                        attitude: getRandom(['매우 좋음', '보통', '부족']), 
+                        attitude: getRandom(['매우 좋음', '보통', '안좋음']), 
                         notes: Math.random() > 0.8 ? '수업 집중도 매우 좋음' : '',
                         requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
                         main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
@@ -225,7 +225,7 @@ const createInitialData = () => {
         });
     });
 
-    // Manually populate all of September 2025 for the first class ('월목1A') to ensure it's fully populated for the demo.
+    // Manually populate all of September 2025 for '월목1A' to ensure testability.
     const demoClass = classes.find(c => c.name === '월목1A');
     if (demoClass) {
         const demoClassStudents = demoClass.studentIds;
@@ -237,30 +237,61 @@ const createInitialData = () => {
         while (date.getMonth() === month) {
             if (demoClassDays.includes(date.getDay())) {
                 const dateString = date.toISOString().split('T')[0];
-                demoClassStudents.forEach(studentId => {
-                    // Only add a record if one doesn't already exist for this student on this day
+                demoClassStudents.forEach((studentId, studentIndex) => {
                     const recordExists = lessonRecords.some(r => r.studentId === studentId && r.date === dateString);
                     if (!recordExists) {
-                        const attendanceRoll = Math.random();
-                        let attendance: LessonRecord['attendance'] = '출석';
-                        if (attendanceRoll > 0.95) attendance = '결석';
-                        else if (attendanceRoll > 0.9) attendance = '지각';
-                        lessonRecords.push({
-                            id: lessonRecordId++,
-                            date: dateString,
-                            studentId: studentId,
-                            attendance,
-                            testScore1: createScore(),
-                            testScore2: createScore(),
-                            testScore3: createScore(),
-                            homework: getRandom(homeworkGrades),
-                            attitude: getRandom(['매우 좋음', '보통', '부족']),
-                            notes: Math.random() > 0.8 ? '추가 학습 필요' : '개념 이해 완료',
-                            requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
-                            main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
-                            supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
-                            reinforcement_textbook: Math.random() > 0.4 ? `${getRandom(textbooks)} ${getRandomInt(10,40)}p` : '',
-                        });
+                        // Special cases for testing notification buttons
+                        if (dateString === '2025-09-15' && studentIndex === 0) {
+                            // First student is absent to trigger notification
+                             lessonRecords.push({
+                                id: lessonRecordId++,
+                                date: dateString,
+                                studentId: studentId,
+                                attendance: '결석',
+                                testScore1: '80', testScore2: null, testScore3: null,
+                                homework: 'A',
+                                attitude: '보통',
+                                notes: '결석',
+                                requested_test: '',
+                                main_textbook: `${getRandom(textbooks)} 110p`, supplementary_textbook: '', reinforcement_textbook: '',
+                            });
+                        } else if (dateString === '2025-09-18') {
+                            // All students have perfect records, should not trigger notification
+                             lessonRecords.push({
+                                id: lessonRecordId++,
+                                date: dateString,
+                                studentId: studentId,
+                                attendance: '출석',
+                                testScore1: createScore(), testScore2: createScore(), testScore3: createScore(),
+                                homework: 'A',
+                                attitude: '매우 좋음',
+                                notes: '수업 태도 우수',
+                                requested_test: '',
+                                main_textbook: `${getRandom(textbooks)} 115p`, supplementary_textbook: '', reinforcement_textbook: '',
+                            });
+                        } else {
+                            // Default random record generation
+                            const attendanceRoll = Math.random();
+                            let attendance: LessonRecord['attendance'] = '출석';
+                            if (attendanceRoll > 0.95) attendance = '결석';
+                            else if (attendanceRoll > 0.9) attendance = '지각';
+                            lessonRecords.push({
+                                id: lessonRecordId++,
+                                date: dateString,
+                                studentId: studentId,
+                                attendance,
+                                testScore1: createScore(),
+                                testScore2: createScore(),
+                                testScore3: createScore(),
+                                homework: getRandom(homeworkGrades),
+                                attitude: getRandom(['매우 좋음', '보통', '안좋음']),
+                                notes: Math.random() > 0.8 ? '추가 학습 필요' : '개념 이해 완료',
+                                requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
+                                main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
+                                supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
+                                reinforcement_textbook: Math.random() > 0.4 ? `${getRandom(textbooks)} ${getRandomInt(10,40)}p` : '',
+                            });
+                        }
                     }
                 });
             }
