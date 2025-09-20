@@ -12,6 +12,7 @@ interface TeachersPageProps {
 
 const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStudents, setClasses }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Teacher, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
@@ -54,10 +55,29 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
     return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
   };
 
-  const handleSaveTeacher = (teacherData: Omit<Teacher, 'id'>) => {
-    const newTeacher = { ...teacherData, id: Date.now() };
-    setTeachers(prev => [...prev, newTeacher]);
+  const handleAddNewTeacher = () => {
+    setSelectedTeacher(null);
+    setIsModalOpen(true);
+  };
+  
+  const handleEditTeacher = (teacher: Teacher) => {
+    setSelectedTeacher(teacher);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
     setIsModalOpen(false);
+    setSelectedTeacher(null);
+  };
+
+  const handleSaveTeacher = (teacherData: Omit<Teacher, 'id'> & { id?: number }) => {
+    if (teacherData.id) {
+        setTeachers(prev => prev.map(t => t.id === teacherData.id ? { ...t, ...teacherData } : t));
+    } else {
+        const newTeacher = { ...teacherData, id: Date.now() };
+        setTeachers(prev => [...prev, newTeacher]);
+    }
+    handleCloseModal();
   };
   
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -98,7 +118,7 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">강사 관리</h1>
-        <button onClick={() => setIsModalOpen(true)} className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors">
+        <button onClick={handleAddNewTeacher} className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors">
           신규 강사 등록
         </button>
       </div>
@@ -129,6 +149,9 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
                     <span className="ml-1">{getSortIndicator(key)}</span>
                   </th>
                 ))}
+                <th scope="col" className="relative px-6 py-3">
+                    <span className="sr-only">Actions</span>
+                </th>
               </tr>
             </thead>
             <tbody className="bg-transparent divide-y divide-gray-700/50">
@@ -145,13 +168,21 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.phone}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.hireDate}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <button onClick={() => handleEditTeacher(teacher)} className="text-yellow-400 hover:text-yellow-300">수정</button>
+                  </td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
       </Card>
-      <TeacherModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} onSave={handleSaveTeacher} />
+      <TeacherModal 
+        isOpen={isModalOpen} 
+        onClose={handleCloseModal} 
+        onSave={handleSaveTeacher} 
+        teacher={selectedTeacher} 
+      />
     </div>
   );
 };

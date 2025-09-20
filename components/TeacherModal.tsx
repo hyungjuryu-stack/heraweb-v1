@@ -5,10 +5,11 @@ import Card from './ui/Card';
 interface TeacherModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (teacher: Omit<Teacher, 'id'>) => void;
+  onSave: (teacher: Omit<Teacher, 'id'> & { id?: number }) => void;
+  teacher: Teacher | null;
 }
 
-const defaultFormData = {
+const defaultFormData: Omit<Teacher, 'id'> = {
     name: '',
     hireDate: new Date().toISOString().split('T')[0],
     resignationDate: '',
@@ -16,14 +17,24 @@ const defaultFormData = {
     email: ''
 };
 
-const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave }) => {
+const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, teacher }) => {
   const [formData, setFormData] = useState(defaultFormData);
 
   useEffect(() => {
-    if (!isOpen) {
-      setFormData(defaultFormData);
+    if (isOpen) {
+        if (teacher) {
+            setFormData({
+                name: teacher.name,
+                hireDate: teacher.hireDate,
+                resignationDate: teacher.resignationDate || '',
+                phone: teacher.phone,
+                email: teacher.email,
+            });
+        } else {
+            setFormData(defaultFormData);
+        }
     }
-  }, [isOpen]);
+  }, [isOpen, teacher]);
   
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -33,7 +44,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave }) 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (formData.name.trim()) {
-      onSave(formData);
+      onSave({ ...formData, id: teacher?.id });
     }
   };
 
@@ -42,7 +53,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave }) 
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
       <div className="w-full max-w-md" onClick={e => e.stopPropagation()}>
-        <Card title="신규 강사 등록">
+        <Card title={teacher ? '강사 정보 수정' : '신규 강사 등록'}>
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
