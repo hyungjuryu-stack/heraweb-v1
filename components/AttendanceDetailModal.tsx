@@ -1,10 +1,9 @@
+
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
-// FIX: Import HomeworkGrade to use for the homework select dropdown.
 import type { LessonRecord, HomeworkGrade } from '../types';
 
 type DailyRecordData = Omit<LessonRecord, 'id' | 'date' | 'studentId'>;
 
-// FIX: Define the possible homework grades for the select dropdown.
 const homeworkGrades: HomeworkGrade[] = ['A', 'B', 'C', 'D', 'F'];
 
 interface AttendanceDetailModalProps {
@@ -20,7 +19,6 @@ interface AttendanceDetailModalProps {
 const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
   isOpen, onClose, onSave, recordData, studentName, date, targetElement
 }) => {
-  // FIX: Replaced non-existent 'homeworkCompleted' with 'homework' and set a default grade.
   const [formData, setFormData] = useState<DailyRecordData>({
     attendance: '출석',
     testScore1: null,
@@ -126,10 +124,9 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
                 <option>부족</option>
             </select>
           </div>
-          {/* FIX: Replaced the 'homeworkCompleted' checkbox with a select dropdown for homework grades. */}
           <div>
             <label htmlFor="homework" className="block text-sm font-medium text-gray-300 mb-1">과제</label>
-            <select id="homework" value={formData.homework} onChange={e => handleChange('homework', e.target.value)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
+            <select id="homework" value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className="w-full bg-gray-800 border-gray-600 rounded-md p-2 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
                 {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
             </select>
           </div>

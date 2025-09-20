@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { Teacher, Student, Class } from '../types';
@@ -159,7 +160,6 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
                   </div>
                 </th>
                 {headers.map(({ key, label }) => (
-                  // FIX: Changed `key={key}` to `key={String(key)}` to avoid potential type errors with React keys.
                   <th key={String(key)} scope="col" onClick={() => requestSort(key)} className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer select-none">
                     {label}
                     <span className="ml-1">{getSortIndicator(key)}</span>

@@ -76,10 +76,10 @@ const App: React.FC = () => {
             case 'lesson-records':
                 return <LessonRecords lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} students={data.students} />;
             case 'class-attendance':
-                // FIX: Pass the required 'teachers' prop to the ClassAttendance component.
-                return <ClassAttendance classes={data.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
+                // Pass the user object to enable role-based permissions for editing attendance records.
+                return <ClassAttendance user={auth.user} classes={data.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
             case 'reports':
-                return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords}/>;
+                return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} classes={data.classes}/>;
             case 'tuition':
                 return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} />;
             case 'counseling':

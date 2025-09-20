@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { StudentStatus } from '../types';
 import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote, Position, HomeworkGrade } from '../types';
@@ -128,11 +129,11 @@ const createInitialData = () => {
         return { id: index + 1, name, teacherId, grade, studentIds: [], schedule, room: `${getRandomInt(2, 5)}0${getRandomInt(1, 4)}호`, capacity };
     });
 
-    // 4. 학생을 반에 배정
+    // 4. 모든 학생을 반에 배정
     const regularClasses = classes.filter(c => c.name.startsWith('월목') || c.name.startsWith('화금') || c.name.startsWith('고등'));
     const advancedClasses = classes.filter(c => c.name.startsWith('수'));
 
-    students.filter(s => s.status === StudentStatus.ENROLLED).forEach(student => {
+    students.forEach(student => {
         // Assign to regular class
         const appropriateRegularClasses = regularClasses.filter(c => c.grade.includes(student.grade) && c.studentIds.length < c.capacity);
         if (appropriateRegularClasses.length > 0) {
@@ -165,7 +166,7 @@ const createInitialData = () => {
     }
 
 
-    // 5. 수업 기록 생성 (학생 등록일 ~ 현재)
+    // 5. 수업 기록 생성 (2025년 1월 1일 ~ 현재)
     const lessonRecords: LessonRecord[] = [];
     let lessonRecordId = 1;
     const scheduleMap: { [key: string]: number } = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
@@ -183,7 +184,7 @@ const createInitialData = () => {
         }
     };
 
-    students.filter(s => s.status === StudentStatus.ENROLLED && (s.regularClassId || s.advancedClassId)).forEach(student => {
+    students.filter(s => s.regularClassId || s.advancedClassId).forEach(student => {
         const studentClasses = [
             classes.find(c => c.id === student.regularClassId),
             classes.find(c => c.id === student.advancedClassId)
@@ -192,7 +193,12 @@ const createInitialData = () => {
         studentClasses.forEach(studentClass => {
             if (!studentClass) return;
             const classDays = studentClass.schedule.split(', ')[0].split(' ')[0].split('/').map(day => scheduleMap[day]);
-            for (let d = new Date(student.enrollmentDate); d <= simToday; d.setDate(d.getDate() + 1)) {
+            for (let d = new Date(2025, 0, 1); d <= simToday; d.setDate(d.getDate() + 1)) {
+                 // 학생의 등록일 이전이거나, 퇴원일 이후인 경우 기록을 생성하지 않음
+                if (d < new Date(student.enrollmentDate) || (student.withdrawalDate && d > new Date(student.withdrawalDate))) {
+                    continue;
+                }
+
                 if (classDays.includes(d.getDay())) {
                      const attendanceRoll = Math.random();
                      let attendance: LessonRecord['attendance'] = '출석';
@@ -218,6 +224,49 @@ const createInitialData = () => {
             }
         });
     });
+
+    // Manually populate all of September 2025 for the first class ('월목1A') to ensure it's fully populated for the demo.
+    const demoClass = classes.find(c => c.name === '월목1A');
+    if (demoClass) {
+        const demoClassStudents = demoClass.studentIds;
+        const demoClassDays = demoClass.schedule.split(', ')[0].split(' ')[0].split('/').map(day => scheduleMap[day]);
+        const year = 2025;
+        const month = 8; // September
+
+        const date = new Date(year, month, 1);
+        while (date.getMonth() === month) {
+            if (demoClassDays.includes(date.getDay())) {
+                const dateString = date.toISOString().split('T')[0];
+                demoClassStudents.forEach(studentId => {
+                    // Only add a record if one doesn't already exist for this student on this day
+                    const recordExists = lessonRecords.some(r => r.studentId === studentId && r.date === dateString);
+                    if (!recordExists) {
+                        const attendanceRoll = Math.random();
+                        let attendance: LessonRecord['attendance'] = '출석';
+                        if (attendanceRoll > 0.95) attendance = '결석';
+                        else if (attendanceRoll > 0.9) attendance = '지각';
+                        lessonRecords.push({
+                            id: lessonRecordId++,
+                            date: dateString,
+                            studentId: studentId,
+                            attendance,
+                            testScore1: createScore(),
+                            testScore2: createScore(),
+                            testScore3: createScore(),
+                            homework: getRandom(homeworkGrades),
+                            attitude: getRandom(['매우 좋음', '보통', '부족']),
+                            notes: Math.random() > 0.8 ? '추가 학습 필요' : '개념 이해 완료',
+                            requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
+                            main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
+                            supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
+                            reinforcement_textbook: Math.random() > 0.4 ? `${getRandom(textbooks)} ${getRandomInt(10,40)}p` : '',
+                        });
+                    }
+                });
+            }
+            date.setDate(date.getDate() + 1);
+        }
+    }
     
     // 6. 월간 리포트 생성
     const monthlyReports: MonthlyReport[] = [];

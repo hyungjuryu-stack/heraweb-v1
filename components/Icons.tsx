@@ -98,3 +98,9 @@ export const KakaoTalkIcon: React.FC<{ className?: string }> = ({ className }) =
         <path d="M12 2C6.48 2 2 6.04 2 11.01C2 13.98 3.53 16.62 6.01 18.24L5.5 22L9.3 20.1C10.18 20.36 11.08 20.5 12 20.5C17.52 20.5 22 16.46 22 11.49C22 6.52 17.52 2.5 12 2.5" transform="translate(0 -0.5)"></path>
     </svg>
 );
+
+export const PdfIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M20 2H8C6.9 2 6 2.9 6 4V16C6 17.1 6.9 18 8 18H20C21.1 18 22 17.1 22 16V4C22 2.9 21.1 2 20 2ZM11 15H8.5V14.25H10.25V12.75H8.5V12H11V10.5H8.5V9H11C11.83 9 12.5 9.67 12.5 10.5V13.5C12.5 14.33 11.83 15 11 15ZM17.5 15H16V9H17.5C18.33 9 19 9.67 19 10.5V13.5C19 14.33 18.33 15 17.5 15ZM17.5 10.5H16V13.5H17.5V10.5ZM5 20H18V22H5C3.9 22 3 21.1 3 20V6H5V20Z" />
+    </svg>
+);

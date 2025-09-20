@@ -1,4 +1,4 @@
-// FIX: Removed self-import of StudentStatus which was causing a conflict.
+
 export enum StudentStatus {
   ENROLLED = '재원',
   CONSULTING = '상담',

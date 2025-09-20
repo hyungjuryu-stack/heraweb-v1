@@ -1,5 +1,7 @@
-import React, { useState, useMemo, useEffect, useRef } from 'react';
-import type { Class, Student, Teacher, LessonRecord, HomeworkGrade } from '../types';
+
+import React, { useState, useMemo, useEffect } from 'react';
+import type { Class, Student, Teacher, LessonRecord, HomeworkGrade, User } from '../types';
+import { KakaoTalkIcon } from '../components/Icons';
 
 // --- Type Definitions ---
 type DailyRecordData = Omit<LessonRecord, 'id' | 'date' | 'studentId'>;
@@ -17,14 +19,18 @@ const StudentInfoCell: React.FC<{ student: Student, index: number }> = ({ studen
         "준비요청",
         "비고",
     ];
+    
+    const shortenSchoolName = (school: string) => {
+        return school.replace('중학교', '중').replace('고등학교', '고').replace('초등학교', '초');
+    }
+
     return (
         <div className="p-1 text-xs h-full flex flex-col justify-between">
             <div className="flex-grow flex items-center mb-1">
                 <span className="font-bold text-base mr-2 w-6 text-center">{index + 1}</span>
                 <div className="border-l border-gray-700/50 pl-2">
                     <div className="font-semibold text-white text-sm">{student.name}</div>
-                    <div className="text-gray-400 text-[11px]">{student.school} {student.grade}</div>
-                    <div className="text-gray-400 text-[11px]">{student.studentPhone}</div>
+                    <div className="text-gray-400 text-[11px]">{shortenSchoolName(student.school)} {student.grade}</div>
                 </div>
             </div>
             <div className="border-t border-gray-700/50 text-center text-gray-400 text-[10px] flex flex-col">
@@ -118,9 +124,100 @@ const AttendanceRecordEdit: React.FC<{
     );
 };
 
+
+const NotificationPreviewModal: React.FC<{
+  isOpen: boolean;
+  onClose: () => void;
+  date: Date | null;
+  cls: Class | undefined;
+  studentsInClass: Student[];
+  recordsMap: Map<string, LessonRecord>;
+}> = ({ isOpen, onClose, date, cls, studentsInClass, recordsMap }) => {
+    if (!isOpen || !date || !cls) return null;
+
+    const dateString = date.toISOString().split('T')[0];
+    const poorHomeworkGrades: HomeworkGrade[] = ['C', 'D', 'F'];
+
+    const studentsToNotify = studentsInClass.map(student => {
+        const record = recordsMap.get(`${student.id}-${dateString}`);
+        const issues: string[] = [];
+        if (record) {
+            if (record.attendance === '지각' || record.attendance === '결석') {
+                issues.push(record.attendance);
+            }
+            if (record.attitude === '부족') {
+                issues.push('수업태도 부족');
+            }
+            if (poorHomeworkGrades.includes(record.homework)) {
+                issues.push(`과제 미흡(${record.homework})`);
+            }
+        }
+        return { student, issues };
+    }).filter(item => item.issues.length > 0);
+    
+    const allStudentsAttendanceSummary = studentsInClass.reduce(
+        (acc, student) => {
+            const record = recordsMap.get(`${student.id}-${dateString}`);
+            const status = record?.attendance || '결석';
+            if (status === '출석') acc.present++;
+            else if (status === '지각') acc.late++;
+            else if (status === '결석') acc.absent++;
+            return acc;
+        },
+        { present: 0, late: 0, absent: 0 }
+    );
+
+
+  return (
+    <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
+      <div className="w-full max-w-md" onClick={e => e.stopPropagation()}>
+        <div className="bg-[#1A3A32] border border-gray-700/50 rounded-xl shadow-lg">
+          <div className="border-b border-gray-700/50 px-6 py-4">
+            <h3 className="text-lg font-bold text-[#E5A823]">알림톡 발송 내용</h3>
+          </div>
+          <div className="p-6">
+            <div className="bg-gray-800/50 p-3 rounded-lg">
+                <div className="bg-[#FEE500] p-4 rounded-lg text-black">
+                    <div className="flex items-start mb-3">
+                        <KakaoTalkIcon className="w-8 h-8 mr-2 flex-shrink-0" />
+                        <h4 className="font-bold text-sm leading-tight">
+                            [헤라매쓰] {cls.name} {date.getMonth() + 1}월 {date.getDate()}일 알림
+                        </h4>
+                    </div>
+                    <div className="bg-white p-3 rounded space-y-1 text-sm">
+                       {studentsToNotify.length > 0 ? (
+                            studentsToNotify.map(({ student, issues }) => (
+                                <p key={student.id}>- {student.name}: {issues.join(', ')}</p>
+                            ))
+                       ) : (
+                           <p>전원 출석 및 특이사항 없음.</p>
+                       )}
+                        <div className="pt-2 mt-2 border-t border-gray-200 text-xs text-gray-600">
+                           총원 {studentsInClass.length}명: 출석 {allStudentsAttendanceSummary.present}, 지각 {allStudentsAttendanceSummary.late}, 결석 {allStudentsAttendanceSummary.absent}
+                        </div>
+                    </div>
+                </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                    * 위 내용은 학부모님께 카카오톡 알림톡으로 발송됩니다.
+                </p>
+            </div>
+          </div>
+          <div className="px-6 py-4 flex justify-end space-x-4 border-t border-gray-700/50">
+            <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-[#E5A823] hover:bg-yellow-400 transition-colors text-gray-900 font-bold">
+              확인
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+
 // --- Main Component ---
 
 interface ClassAttendanceProps {
+  user: User;
   classes: Class[];
   students: Student[];
   teachers: Teacher[];
@@ -128,12 +225,15 @@ interface ClassAttendanceProps {
   setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
 }
 
-const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, lessonRecords, setLessonRecords }) => {
+const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, students, lessonRecords, setLessonRecords }) => {
   const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(new Date(2025, 8, 1));
   const [editingCell, setEditingCell] = useState<{ studentId: number; date: string } | null>(null);
-  const [studentNotes, setStudentNotes] = useState<Record<number, string>>({});
   const [sentNotifications, setSentNotifications] = useState<Record<string, { sent: boolean, sending: boolean }>>({});
+  const [notificationPreviewDate, setNotificationPreviewDate] = useState<Date | null>(null);
+  const [resendingKey, setResendingKey] = useState<string | null>(null);
+
+  const canEdit = user.role === 'admin' || user.role === 'operator';
 
   useEffect(() => {
     // If classes are loaded and no class is selected, select the first one.
@@ -151,16 +251,6 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
   const handleNextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
   
   const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [selectedClassId, classes]);
-
-  useEffect(() => {
-    const notes: Record<number, string> = {};
-    students.forEach(s => {
-        if (s.diagnosticTestNotes) {
-            notes[s.id] = s.diagnosticTestNotes;
-        }
-    });
-    setStudentNotes(notes);
-  }, [students]);
 
   const studentsInClass = useMemo(() => {
     if (!selectedClass) return [];
@@ -198,6 +288,46 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
     return new Map(lessonRecords.map(r => [`${r.studentId}-${r.date}`, r]));
   }, [lessonRecords]);
   
+  useEffect(() => {
+    if (!selectedClassId) return;
+
+    const simToday = new Date(2025, 8, 15);
+    simToday.setHours(0, 0, 0, 0); // Normalize to start of day
+
+    const notificationsToUpdate: Record<string, { sent: boolean; sending: boolean }> = {};
+    
+    classDaysInMonth.forEach(date => {
+        const classDate = new Date(date);
+        classDate.setHours(0, 0, 0, 0); // Normalize
+
+        if (classDate < simToday) {
+            const key = `${classDate.toISOString().split('T')[0]}-${selectedClassId}`;
+            notificationsToUpdate[key] = { sent: true, sending: false };
+        }
+    });
+
+    setSentNotifications(prev => ({ ...prev, ...notificationsToUpdate }));
+  }, [classDaysInMonth, selectedClassId]);
+  
+  const notificationTriggers = useMemo(() => {
+      const triggers: Record<string, boolean> = {};
+      const poorHomeworkGrades: HomeworkGrade[] = ['C', 'D', 'F'];
+
+      classDaysInMonth.forEach(date => {
+          const dateString = date.toISOString().split('T')[0];
+          const hasTrigger = studentsInClass.some(student => {
+              const record = recordsMap.get(`${student.id}-${dateString}`);
+              if (!record) return false;
+              return record.attendance === '지각' ||
+                     record.attendance === '결석' ||
+                     record.attitude === '부족' ||
+                     poorHomeworkGrades.includes(record.homework);
+          });
+          triggers[dateString] = hasTrigger;
+      });
+      return triggers;
+  }, [classDaysInMonth, studentsInClass, recordsMap]);
+
   const handleSaveRecord = (studentId: number, dateString: string, data: DailyRecordData) => {
     setLessonRecords(prevRecords => {
       const existingRecord = prevRecords.find(r => r.studentId === studentId && r.date === dateString);
@@ -215,10 +345,18 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
     if (!selectedClassId) return;
     const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
     if (sentNotifications[key]?.sent && !isResend) return;
+    
+    if (isResend) {
+        setResendingKey(key);
+    }
 
     setSentNotifications(prev => ({ ...prev, [key]: { ...prev[key], sending: true } }));
     setTimeout(() => {
         setSentNotifications(prev => ({ ...prev, [key]: { sent: true, sending: false } }));
+        if (isResend) {
+            setResendingKey(null);
+            alert('알림톡을 재발송했습니다.');
+        }
     }, 1000);
   };
 
@@ -255,9 +393,8 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
             <thead className="bg-gray-800/80 backdrop-blur-sm">
               <tr className="border-b border-gray-600">
                 <th scope="col" className="sticky left-0 z-10 bg-gray-800/80 px-2 py-2 text-xs font-bold text-gray-300 w-48 border-r border-gray-600">학생 정보</th>
-                <th scope="col" className="sticky left-48 z-10 bg-gray-800/80 px-2 py-2 text-xs font-bold text-gray-300 w-32 border-r border-gray-600">특이사항</th>
                 {classDaysInMonth.map(date => (
-                   <th key={date.toISOString()} scope="col" className="px-2 py-1 text-center text-xs font-bold text-gray-300 w-32 border-r border-gray-600">
+                   <th key={date.toISOString()} scope="col" className="px-2 py-1 text-center text-xs font-bold text-gray-300 w-44 border-r border-gray-600">
                     {date.getMonth() + 1}/{date.getDate()}<br/>({dayNames[date.getDay()]})
                   </th>
                 ))}
@@ -269,14 +406,6 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
                   <td className="sticky left-0 bg-[#142f29]/90 p-0 align-top w-48 h-48 border-r border-gray-600">
                       <StudentInfoCell student={student} index={index} />
                   </td>
-                  <td className="sticky left-48 bg-[#142f29]/90 p-1 align-middle w-32 h-48 border-r border-gray-600">
-                    <textarea 
-                        value={studentNotes[student.id] || ''}
-                        onChange={e => setStudentNotes(p => ({...p, [student.id]: e.target.value}))}
-                        className="w-full bg-transparent text-center text-xs resize-none p-1 focus:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-yellow-500 rounded"
-                        placeholder="특이사항 입력..."
-                    />
-                  </td>
                   {classDaysInMonth.map(date => {
                      const dateString = date.toISOString().split('T')[0];
                      const record = recordsMap.get(`${student.id}-${dateString}`);
@@ -284,8 +413,8 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
                      return (
                        <td 
                           key={dateString} 
-                          onClick={() => !isEditing && setEditingCell({ studentId: student.id, date: dateString })}
-                          className="p-0 align-top w-32 h-48 border-r border-gray-600 relative cursor-pointer hover:bg-gray-700/30"
+                          onClick={() => !isEditing && canEdit && setEditingCell({ studentId: student.id, date: dateString })}
+                          className={`p-0 align-top w-44 h-48 border-r border-gray-600 relative ${canEdit ? 'cursor-pointer hover:bg-gray-700/30' : 'cursor-default'}`}
                        >
                          {isEditing ? (
                             <AttendanceRecordEdit 
@@ -304,28 +433,45 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
             </tbody>
             <tfoot className="bg-gray-800/80 backdrop-blur-sm text-xs">
                  <tr className="border-t-2 border-gray-600">
-                    <td colSpan={2} className="sticky left-0 bg-gray-800/80 px-2 py-2 text-center font-bold text-gray-300">알림톡 발송</td>
+                    <td className="sticky left-0 bg-gray-800/80 px-2 py-2 text-center font-bold text-gray-300 border-r border-gray-600">알림톡 발송</td>
                     {classDaysInMonth.map(date => {
-                        const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
+                        const dateString = date.toISOString().split('T')[0];
+                        const key = `${dateString}-${selectedClassId}`;
                         const status = sentNotifications[key];
                         const isSent = status?.sent;
                         const isSending = status?.sending;
+                        const needsNotification = notificationTriggers[dateString];
+                        const isResending = resendingKey === key;
+
                         return (
                              <td key={date.toISOString()} className="p-2 align-middle text-center border-r border-gray-600">
                                 {isSent ? (
                                     <div className="flex flex-col items-center gap-1">
                                         <span className="font-semibold text-green-400">발송완료</span>
-                                        <button onClick={() => handleSendNotification(date, true)} className="w-full text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white">
-                                            재발송
-                                        </button>
+                                        <div className="flex w-full gap-1">
+                                            <button onClick={() => setNotificationPreviewDate(date)} className="flex-1 text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">
+                                                내용보기
+                                            </button>
+                                            <button 
+                                                onClick={() => {
+                                                    if (window.confirm('이미 발송된 알림입니다. 다시 보내시겠습니까?')) {
+                                                        handleSendNotification(date, true);
+                                                    }
+                                                }}
+                                                disabled={isResending}
+                                                className="flex-1 text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white disabled:bg-gray-700 disabled:cursor-not-allowed"
+                                            >
+                                                {isResending ? '재발송 중...' : '재발송'}
+                                            </button>
+                                        </div>
                                     </div>
                                 ) : (
                                     <button 
                                         onClick={() => handleSendNotification(date)} 
-                                        disabled={isSending}
-                                        className="w-full text-xs px-2 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold disabled:bg-gray-500"
+                                        disabled={isSending || !needsNotification}
+                                        className="w-full text-xs px-2 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed"
                                     >
-                                        {isSending ? '전송중...' : '발송'}
+                                        {isSending ? '전송중...' : (needsNotification ? '발송' : '발송 대상 없음')}
                                     </button>
                                 )}
                             </td>
@@ -335,6 +481,15 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, le
             </tfoot>
           </table>
       </div>
+
+       <NotificationPreviewModal
+        isOpen={!!notificationPreviewDate}
+        onClose={() => setNotificationPreviewDate(null)}
+        date={notificationPreviewDate}
+        cls={selectedClass}
+        studentsInClass={studentsInClass}
+        recordsMap={recordsMap}
+      />
     </div>
   );
 };

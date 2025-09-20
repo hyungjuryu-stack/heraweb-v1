@@ -1,5 +1,6 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
-import type { MonthlyReport, Student, Teacher, LessonRecord } from '../types';
+import type { MonthlyReport, Student, Teacher, LessonRecord, HomeworkGrade } from '../types';
 import Card from './ui/Card';
 import { generateStudentReview } from '../services/geminiService';
 import { Radar, RadarChart, PolarGrid, PolarAngleAxis, PolarRadiusAxis, ResponsiveContainer } from 'recharts';
@@ -49,6 +50,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
     const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
     const [isGenerating, setIsGenerating] = useState(false);
     const [generationError, setGenerationError] = useState<string | null>(null);
+    const [recordsForPeriod, setRecordsForPeriod] = useState<LessonRecord[]>([]);
 
     const [periodType, setPeriodType] = useState<PeriodType>('monthly');
     const [periodConfig, setPeriodConfig] = useState({
@@ -159,9 +161,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
             setFormData(prev => ({
                 ...prev,
                 studentId: student.id,
-                attendanceRate: student.attendanceRate,
-                avgScore: student.avgScore,
-                homeworkRate: student.homeworkRate,
                 teacherId: student.teacherId || 0,
                 reviewText: '', // Clear previous review
             }));
@@ -170,12 +169,85 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
             setFormData(prev => ({...prev, studentId: 0, reviewText: ''}));
         }
     };
+    
+    // Effect to calculate stats based on period and selected student
+    useEffect(() => {
+        if (!selectedStudent) {
+            setRecordsForPeriod([]);
+            return;
+        };
+
+        let startDate: Date, endDate: Date;
+        const { year, month, quarter, half } = periodConfig;
+        
+        switch (periodType) {
+            case 'monthly':
+                startDate = new Date(year, month - 1, 1);
+                endDate = new Date(year, month, 0, 23, 59, 59);
+                break;
+            case 'quarterly':
+                startDate = new Date(year, (quarter - 1) * 3, 1);
+                endDate = new Date(year, quarter * 3, 0, 23, 59, 59);
+                break;
+            case 'half-yearly':
+                startDate = new Date(year, half === 1 ? 0 : 6, 1);
+                endDate = new Date(year, half === 1 ? 6 : 12, 0, 23, 59, 59);
+                break;
+            case 'custom':
+                startDate = new Date(periodConfig.startDate);
+                endDate = new Date(periodConfig.endDate);
+                endDate.setHours(23, 59, 59); // Include the whole end day
+                break;
+        }
+
+        const records = lessonRecords.filter(r => {
+            const recordDate = new Date(r.date);
+            return r.studentId === selectedStudent.id && recordDate >= startDate && recordDate <= endDate;
+        });
+        setRecordsForPeriod(records);
+
+        if (records.length > 0) {
+            // Calculate attendance
+            const attendanceCounts = records.reduce((acc, r) => {
+                acc[r.attendance] = (acc[r.attendance] || 0) + 1;
+                return acc;
+            }, {} as Record<LessonRecord['attendance'], number>);
+            const totalAttendance = (attendanceCounts['출석'] || 0) + (attendanceCounts['지각'] || 0);
+            const attendanceRate = Math.round((totalAttendance / records.length) * 100);
+
+            // Calculate homework
+            const homeworkScoreMap: Record<HomeworkGrade, number> = { A: 100, B: 85, C: 70, D: 50, F: 30 };
+            const totalHomeworkScore = records.reduce((sum, r) => sum + (homeworkScoreMap[r.homework] || 0), 0);
+            const homeworkRate = Math.round(totalHomeworkScore / records.length);
+            
+            // Calculate test scores
+            const normalizeScore = (score: string | null): number | null => {
+                if (!score) return null;
+                if (score.includes('/')) {
+                    const [correct, total] = score.split('/').map(Number);
+                    return total > 0 ? (correct / total) * 100 : null;
+                }
+                const num = parseFloat(score);
+                return isNaN(num) ? null : num;
+            };
+            const scores = records.flatMap(r => [normalizeScore(r.testScore1), normalizeScore(r.testScore2), normalizeScore(r.testScore3)]).filter((s): s is number => s !== null);
+            const avgScore = scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : 0;
+            
+            setFormData(prev => ({ ...prev, attendanceRate, homeworkRate, avgScore }));
+        } else {
+            setFormData(prev => ({ ...prev, attendanceRate: 0, homeworkRate: 0, avgScore: 0 }));
+        }
+
+    }, [selectedStudent, periodConfig, periodType, lessonRecords]);
+
 
     const handleGenerateReview = async () => {
         if (!selectedStudent) return;
         
-        if (selectedStudent.avgScore <= 0 || selectedStudent.attendanceRate <= 0 || selectedStudent.homeworkRate <= 0) {
-            setGenerationError('리뷰 생성을 위해 학생의 평균 점수, 출석률, 과제 수행률 데이터가 모두 필요합니다.');
+        const tempStudentDataForAI = { ...selectedStudent, ...formData };
+
+        if (tempStudentDataForAI.avgScore <= 0 && recordsForPeriod.length > 0) {
+            setGenerationError('리뷰 생성을 위한 기간 내 테스트 점수 데이터가 부족합니다.');
             return;
         }
 
@@ -183,8 +255,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
         setGenerationError(null);
         try {
             const teacherName = selectedStudent.teacherId ? teacherMap.get(selectedStudent.teacherId) || null : null;
-            const studentRecords = lessonRecords.filter(r => r.studentId === selectedStudent.id);
-            const review = await generateStudentReview(selectedStudent, studentRecords, teacherName);
+            const review = await generateStudentReview(tempStudentDataForAI, recordsForPeriod, teacherName);
             setFormData(prev => ({...prev, reviewText: review}));
         } catch (error: any) {
             setGenerationError(error.message || '리뷰 생성 중 오류가 발생했습니다.');
@@ -202,11 +273,11 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
         onSave({ ...formData, id: report?.id });
     };
 
-    const chartData = useMemo(() => selectedStudent ? [
-      { subject: '평균 점수', value: selectedStudent.avgScore, fullMark: 100 },
-      { subject: '출석률', value: selectedStudent.attendanceRate, fullMark: 100 },
-      { subject: '과제 수행률', value: selectedStudent.homeworkRate, fullMark: 100 },
-    ] : [], [selectedStudent]);
+    const chartData = useMemo(() => [
+      { subject: '평균 점수', value: formData.avgScore, fullMark: 100 },
+      { subject: '출석률', value: formData.attendanceRate, fullMark: 100 },
+      { subject: '과제 수행률', value: formData.homeworkRate, fullMark: 100 },
+    ], [formData]);
 
     if (!isOpen) return null;
     
@@ -294,15 +365,15 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                                     <div className="space-y-3">
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">평균 점수</p>
-                                            <p className="text-2xl font-bold text-white">{selectedStudent.avgScore}점</p>
+                                            <p className="text-2xl font-bold text-white">{formData.avgScore}점</p>
                                         </div>
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">출석률</p>
-                                            <p className="text-2xl font-bold text-white">{selectedStudent.attendanceRate}%</p>
+                                            <p className="text-2xl font-bold text-white">{formData.attendanceRate}%</p>
                                         </div>
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">과제 수행률</p>
-                                            <p className="text-2xl font-bold text-white">{selectedStudent.homeworkRate}%</p>
+                                            <p className="text-2xl font-bold text-white">{formData.homeworkRate}%</p>
                                         </div>
                                     </div>
                                     <div className="h-48">

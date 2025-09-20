@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { Class, Teacher, Student } from '../types';
@@ -131,9 +132,6 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
 
   const handleDeleteSelected = () => {
       if (window.confirm(`${selectedIds.length}개의 반을 정말로 삭제하시겠습니까? 해당 반에 속한 학생들은 "미배정" 상태가 됩니다.`)) {
-          // FIX: Property 'currentClassId' does not exist on type 'Student'.
-          // Updated to correctly check both 'regularClassId' and 'advancedClassId' for each student,
-          // and unassign them if their class is being deleted.
           setStudents(prev => prev.map(s => {
               const isRegularClassDeleted = s.regularClassId && selectedIds.includes(s.regularClassId);
               const isAdvancedClassDeleted = s.advancedClassId && selectedIds.includes(s.advancedClassId);

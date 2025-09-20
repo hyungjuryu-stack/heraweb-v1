@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import type { Teacher, Position } from '../types';
 import Card from './ui/Card';
@@ -30,8 +31,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
             setFormData({
                 name: teacher.name,
                 position: teacher.position,
-                // 'operator' role is shown as 'admin' in the dropdown and will be saved as 'admin'.
-                role: teacher.role === 'operator' ? 'admin' : teacher.role,
+                role: teacher.role,
                 hireDate: teacher.hireDate,
                 resignationDate: teacher.resignationDate || '',
                 phone: teacher.phone,
@@ -100,6 +100,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
                   className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
                 >
                   <option value="admin">관리자 권한</option>
+                  <option value="operator">운영자 권한</option>
                   <option value="teacher">강사 권한</option>
                 </select>
               </div>
