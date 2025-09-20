@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { MonthlyReport, Student, Teacher, LessonRecord } from '../types';
 import ReportModal from '../components/ReportModal';
+import ReportPreviewModal from '../components/ReportPreviewModal';
 import { StudentStatus } from '../types';
 
 const SentStatusBadge: React.FC<{ status: MonthlyReport['sentStatus'] }> = ({ status }) => {
@@ -25,10 +26,17 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [editingReport, setEditingReport] = useState<MonthlyReport | null>(null);
+    const [previewingReport, setPreviewingReport] = useState<MonthlyReport | null>(null);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
     const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
+
+    const studentForPreview = useMemo(() => {
+        if (!previewingReport) return null;
+        return students.find(s => s.id === previewingReport.studentId);
+    }, [previewingReport, students]);
+
 
     const handleAddNewReport = () => {
         setEditingReport(null);
@@ -61,15 +69,26 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
     
     const handleSendReport = (reportId: number) => {
         const report = monthlyReports.find(r => r.id === reportId);
-        const student = students.find(s => s.id === report?.studentId);
-        if (report && student) {
-            if (window.confirm(`${student.name} 학생의 리포트를 학부모님께 발송하시겠습니까?`)) {
-                setMonthlyReports(prev => prev.map(r => 
-                    r.id === reportId ? { ...r, sentStatus: '발송완료', sentDate: new Date().toISOString().split('T')[0] } : r
-                ));
-                alert('리포트가 성공적으로 발송되었습니다.');
+        if (report && report.reviewText) {
+            const student = students.find(s => s.id === report.studentId);
+            if (student) {
+                 setPreviewingReport(report);
+            } else {
+                alert('리포트에 연결된 학생 정보를 찾을 수 없습니다.');
             }
+        } else if (report && !report.reviewText) {
+            alert('리포트 총평이 작성되지 않아 발송할 수 없습니다. 리포트를 수정하여 총평을 작성해주세요.');
         }
+    };
+    
+    const handleConfirmSend = () => {
+        if (!previewingReport) return;
+    
+        setMonthlyReports(prev => prev.map(r => 
+            r.id === previewingReport.id ? { ...r, sentStatus: '발송완료', sentDate: new Date().toISOString().split('T')[0] } : r
+        ));
+        alert('리포트가 성공적으로 발송되었습니다.');
+        setPreviewingReport(null); // Close the modal
     };
 
     const sortedReports = useMemo(() => {
@@ -247,9 +266,10 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button
                                     onClick={() => handleSendReport(report.id)}
-                                    className={`mr-4 ${report.sentStatus === '발송완료' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
+                                    disabled={report.sentStatus === '발송완료'}
+                                    className={`mr-4 ${report.sentStatus === '발송완료' ? 'text-gray-500 cursor-not-allowed' : 'text-blue-400 hover:text-blue-300'}`}
                                 >
-                                    {report.sentStatus === '발송완료' ? '재발송' : '발송'}
+                                    {report.sentStatus === '발송완료' ? '발송됨' : '발송'}
                                 </button>
                                 <button onClick={() => handleEditReport(report)} className="text-yellow-400 hover:text-yellow-300">수정</button>
                             </td>
@@ -259,6 +279,14 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
                 </table>
                 </div>
             </Card>
+            <ReportPreviewModal
+                isOpen={!!previewingReport}
+                onClose={() => setPreviewingReport(null)}
+                onConfirmSend={handleConfirmSend}
+                report={previewingReport}
+                student={studentForPreview}
+                teacherName={studentForPreview?.teacherId ? teacherMap.get(studentForPreview.teacherId) : '미배정'}
+            />
             <ReportModal
                 isOpen={isModalOpen}
                 onClose={handleCloseModal}

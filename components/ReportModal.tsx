@@ -173,6 +173,12 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
 
     const handleGenerateReview = async () => {
         if (!selectedStudent) return;
+        
+        if (selectedStudent.avgScore <= 0 || selectedStudent.attendanceRate <= 0 || selectedStudent.homeworkRate <= 0) {
+            setGenerationError('리뷰 생성을 위해 학생의 평균 점수, 출석률, 과제 수행률 데이터가 모두 필요합니다.');
+            return;
+        }
+
         setIsGenerating(true);
         setGenerationError(null);
         try {

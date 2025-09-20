@@ -1,3 +1,4 @@
+// FIX: Removed self-import of StudentStatus which was causing a conflict.
 export enum StudentStatus {
   ENROLLED = '재원',
   CONSULTING = '상담',
@@ -58,15 +59,23 @@ export interface Teacher {
   resignationDate: string;
 }
 
+export type HomeworkGrade = 'A' | 'B' | 'C' | 'D' | 'F';
+
 export interface LessonRecord {
   id: number;
   date: string;
   studentId: number;
   attendance: '출석' | '지각' | '결석';
-  testScore: number | null;
-  homeworkCompleted: boolean;
+  testScore1: string | null;
+  testScore2: string | null;
+  testScore3: string | null;
+  homework: HomeworkGrade;
   attitude: '매우 좋음' | '보통' | '부족';
   notes: string;
+  requested_test?: string;
+  main_textbook?: string;
+  supplementary_textbook?: string;
+  reinforcement_textbook?: string;
 }
 
 export interface MonthlyReport {

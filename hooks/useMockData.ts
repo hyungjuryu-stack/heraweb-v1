@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { StudentStatus } from '../types';
-import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote, Position } from '../types';
+import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote, Position, HomeworkGrade } from '../types';
 
 // --- 데이터 생성 헬퍼 함수 ---
 
@@ -17,7 +17,7 @@ const getRandomDate = (start: Date, end: Date): string => {
 };
 
 const createInitialData = () => {
-    const simToday = new Date(2025, 5, 15); // 시뮬레이션 기준일: 2025년 6월 15일
+    const simToday = new Date(2025, 8, 15); // 시뮬레이션 기준일: 2025년 9월 15일
 
     // 1. 강사 데이터 (5명)
     const teachers: Teacher[] = [
@@ -85,8 +85,12 @@ const createInitialData = () => {
 
     // 3. 반 데이터 생성
     const classNames = [
-        '월목1A', '월목1B', '월목2A', '월목2B', '월목3A',
-        '화금1A', '화금1B', '화금1C', '화금2A', '화금2B', '화금2C', '화금3A',
+        '월목1A', '월목1B', '월목1C', 
+        '월목2A', '월목2B', '월목2C', 
+        '월목3A', '월목3B', '월목3C',
+        '화금1A', '화금1B', '화금1C', '화금1D',
+        '화금2A', '화금2B', '화금2C', '화금2D',
+        '화금3A', '화금3B', '화금3C',
         '수A', '수B', '수C', '수D',
         '고등월목', '고등수토', '고등목토', '고등토', '고등토일'
     ];
@@ -161,12 +165,23 @@ const createInitialData = () => {
     }
 
 
-    // 5. 한 달치 수업 기록 생성
+    // 5. 수업 기록 생성 (학생 등록일 ~ 현재)
     const lessonRecords: LessonRecord[] = [];
     let lessonRecordId = 1;
-    const lastMonth = new Date(simToday.getFullYear(), simToday.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(simToday.getFullYear(), simToday.getMonth(), 0);
     const scheduleMap: { [key: string]: number } = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
+    const homeworkGrades: HomeworkGrade[] = ['A', 'A', 'A', 'B', 'B', 'C', 'D', 'F']; // Skew towards better grades
+    const textbooks = ['쎈', 'RPM', '개념원리', '블랙라벨', '일품'];
+
+    const createScore = (): string | null => {
+        if (Math.random() < 0.3) return null; // 30% chance of no test for a given slot
+        if (Math.random() < 0.5) {
+            return getRandomInt(60, 100).toString(); // e.g., '85'
+        } else {
+            const total = getRandom([10, 15, 20, 25]);
+            const correct = getRandomInt(Math.floor(total * 0.6), total);
+            return `${correct}/${total}`; // e.g., '17/20'
+        }
+    };
 
     students.filter(s => s.status === StudentStatus.ENROLLED && (s.regularClassId || s.advancedClassId)).forEach(student => {
         const studentClasses = [
@@ -177,13 +192,28 @@ const createInitialData = () => {
         studentClasses.forEach(studentClass => {
             if (!studentClass) return;
             const classDays = studentClass.schedule.split(', ')[0].split(' ')[0].split('/').map(day => scheduleMap[day]);
-            for (let d = new Date(lastMonth); d <= endOfLastMonth; d.setDate(d.getDate() + 1)) {
+            for (let d = new Date(student.enrollmentDate); d <= simToday; d.setDate(d.getDate() + 1)) {
                 if (classDays.includes(d.getDay())) {
                      const attendanceRoll = Math.random();
                      let attendance: LessonRecord['attendance'] = '출석';
                      if (attendanceRoll > 0.95) attendance = '결석';
                      else if (attendanceRoll > 0.9) attendance = '지각';
-                     lessonRecords.push({ id: lessonRecordId++, date: new Date(d).toISOString().split('T')[0], studentId: student.id, attendance, testScore: Math.random() > 0.2 ? getRandomInt(70, 100) : null, homeworkCompleted: Math.random() > 0.1, attitude: getRandom(['매우 좋음', '보통', '부족']), notes: Math.random() > 0.7 ? '수업 집중도 좋음' : '' });
+                     lessonRecords.push({ 
+                        id: lessonRecordId++, 
+                        date: new Date(d).toISOString().split('T')[0], 
+                        studentId: student.id, 
+                        attendance, 
+                        testScore1: createScore(),
+                        testScore2: createScore(),
+                        testScore3: createScore(),
+                        homework: getRandom(homeworkGrades), 
+                        attitude: getRandom(['매우 좋음', '보통', '부족']), 
+                        notes: Math.random() > 0.8 ? '수업 집중도 매우 좋음' : '',
+                        requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
+                        main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
+                        supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
+                        reinforcement_textbook: Math.random() > 0.4 ? `${getRandom(textbooks)} ${getRandomInt(10,40)}p` : '',
+                     });
                 }
             }
         });
@@ -192,6 +222,8 @@ const createInitialData = () => {
     // 6. 월간 리포트 생성
     const monthlyReports: MonthlyReport[] = [];
     let reportId = 1;
+    const lastMonth = new Date(simToday.getFullYear(), simToday.getMonth() - 1, 1);
+    const endOfLastMonth = new Date(simToday.getFullYear(), simToday.getMonth(), 0);
     const reportPeriod = `${lastMonth.getFullYear()}년 ${lastMonth.getMonth() + 1}월`;
 
     students.filter(s => s.status === StudentStatus.ENROLLED && s.teacherId).forEach(student => {

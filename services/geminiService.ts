@@ -87,7 +87,7 @@ export const generateStudentReview = async (student: Student, studentRecords: Le
   try {
     const recordsSummary = studentRecords.length > 0
       ? `최근 수업 기록 요약:\n` + studentRecords.slice(-5).map(r => 
-          `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homeworkCompleted ? '완료' : '미완료'}), 노트: ${r.notes || '없음'}`
+          `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework}), 노트: ${r.notes || '없음'}`
         ).join('\n')
       : "최근 수업 기록이 없습니다.";
 

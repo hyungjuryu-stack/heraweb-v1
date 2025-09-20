@@ -106,8 +106,8 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
         { key: 'date', label: '날짜' },
         { key: 'studentId', label: '학생' },
         { key: 'attendance', label: '출결' },
-        { key: 'testScore', label: '테스트 점수' },
-        { key: 'homeworkCompleted', label: '과제' },
+        { key: 'testScore1', label: '테스트 점수' },
+        { key: 'homework', label: '과제' },
         { key: 'attitude', label: '수업 태도' },
         { key: 'notes', label: '비고' },
     ];
@@ -186,8 +186,8 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.date}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{studentMap.get(record.studentId)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm"><AttendanceBadge status={record.attendance} /></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.testScore ?? '-'}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homeworkCompleted ? 'O' : 'X'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.testScore1 ?? '-'}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homework}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.attitude}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-xs">{record.notes}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">

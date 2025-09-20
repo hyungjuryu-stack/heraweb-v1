@@ -1,195 +1,342 @@
-import React, { useState, useMemo, useEffect } from 'react';
-import Card from '../components/ui/Card';
-import type { LessonRecord, Class, Student } from '../types';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
+import type { Class, Student, Teacher, LessonRecord, HomeworkGrade } from '../types';
 
+// --- Type Definitions ---
 type DailyRecordData = Omit<LessonRecord, 'id' | 'date' | 'studentId'>;
+const homeworkGrades: HomeworkGrade[] = ['A', 'B', 'C', 'D', 'F'];
 
-const AttendanceBadge: React.FC<{ status: LessonRecord['attendance'] }> = ({ status }) => {
-    const colorMap = {
-        '출석': 'bg-green-500/20 text-green-300',
-        '지각': 'bg-yellow-500/20 text-yellow-300',
-        '결석': 'bg-red-500/20 text-red-300',
-    };
-    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorMap[status]}`}>{status}</span>;
-}
+// --- Helper Components ---
 
-interface ClassAttendancePageProps {
-    classes: Class[];
-    students: Student[];
-    lessonRecords: LessonRecord[];
-    setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
-}
-
-const ClassAttendance: React.FC<ClassAttendancePageProps> = ({ classes, students, lessonRecords, setLessonRecords }) => {
-    const [selectedClassId, setSelectedClassId] = useState<number | string>(classes[0]?.id || '');
-    const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
-    const [recordsData, setRecordsData] = useState<Map<number, DailyRecordData>>(new Map());
-
-    const studentsInClass = useMemo(() => {
-        if (!selectedClassId) return [];
-        const classId = Number(selectedClassId);
-        const selectedClass = classes.find(c => c.id === classId);
-        if (!selectedClass) return [];
-        return students.filter(s => selectedClass.studentIds.includes(s.id));
-    }, [selectedClassId, classes, students]);
-
-    useEffect(() => {
-        const newRecordsData = new Map<number, DailyRecordData>();
-        studentsInClass.forEach(student => {
-            const existingRecord = lessonRecords.find(
-                r => r.studentId === student.id && r.date === selectedDate
-            );
-            if (existingRecord) {
-                newRecordsData.set(student.id, {
-                    attendance: existingRecord.attendance,
-                    testScore: existingRecord.testScore,
-                    homeworkCompleted: existingRecord.homeworkCompleted,
-                    attitude: existingRecord.attitude,
-                    notes: existingRecord.notes,
-                });
-            } else {
-                newRecordsData.set(student.id, {
-                    attendance: '출석',
-                    testScore: null,
-                    homeworkCompleted: true,
-                    attitude: '보통',
-                    notes: '',
-                });
-            }
-        });
-        setRecordsData(newRecordsData);
-    }, [studentsInClass, selectedDate, lessonRecords]);
-
-    const handleRecordChange = (studentId: number, field: keyof DailyRecordData, value: any) => {
-        setRecordsData(prev => {
-            const newMap = new Map(prev);
-            const currentRecord = newMap.get(studentId);
-            if (currentRecord) {
-                if (field === 'testScore') {
-                    const score = value === '' ? null : Number(value);
-                    newMap.set(studentId, { ...currentRecord, [field]: score });
-                } else if(field === 'homeworkCompleted') {
-                    newMap.set(studentId, { ...currentRecord, [field]: Boolean(value) });
-                }
-                else {
-                    newMap.set(studentId, { ...currentRecord, [field]: value });
-                }
-            }
-            return newMap;
-        });
-    };
-
-    const handleSaveRecords = () => {
-        const updatedLessonRecords = [...lessonRecords];
-
-        recordsData.forEach((data, studentId) => {
-            const existingRecordIndex = updatedLessonRecords.findIndex(
-                r => r.studentId === studentId && r.date === selectedDate
-            );
-
-            if (existingRecordIndex > -1) {
-                const originalRecord = updatedLessonRecords[existingRecordIndex];
-                updatedLessonRecords[existingRecordIndex] = { ...originalRecord, ...data };
-            } else {
-                const newRecord: LessonRecord = {
-                    id: Date.now() + studentId,
-                    studentId,
-                    date: selectedDate,
-                    ...data
-                };
-                updatedLessonRecords.push(newRecord);
-            }
-        });
-
-        setLessonRecords(updatedLessonRecords);
-        alert('수업 기록이 저장되었습니다.');
-    };
-
+const StudentInfoCell: React.FC<{ student: Student, index: number }> = ({ student, index }) => {
+    const labels = [
+        "출석/태도/과제",
+        "테스트 (1/2/3)",
+        "본교재",
+        "부교재",
+        "보강교재",
+        "준비요청",
+        "비고",
+    ];
     return (
-        <div>
-            <div className="flex flex-col md:flex-row justify-between md:items-center mb-6 gap-4">
-                <h1 className="text-3xl font-bold text-white">수업 출석부</h1>
-                <div className="flex items-center gap-4">
-                    <select
-                        value={selectedClassId}
-                        onChange={e => setSelectedClassId(e.target.value)}
-                        className="w-48 bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
-                    >
-                        {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                    </select>
-                    <input
-                        type="date"
-                        value={selectedDate}
-                        onChange={e => setSelectedDate(e.target.value)}
-                        className="bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
-                    />
-                    <button
-                        onClick={handleSaveRecords}
-                        className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors"
-                    >
-                        기록 저장
-                    </button>
+        <div className="p-1 text-xs h-full flex flex-col justify-between">
+            <div className="flex-grow flex items-center mb-1">
+                <span className="font-bold text-base mr-2 w-6 text-center">{index + 1}</span>
+                <div className="border-l border-gray-700/50 pl-2">
+                    <div className="font-semibold text-white text-sm">{student.name}</div>
+                    <div className="text-gray-400 text-[11px]">{student.school} {student.grade}</div>
+                    <div className="text-gray-400 text-[11px]">{student.studentPhone}</div>
                 </div>
             </div>
-
-            <Card>
-                <div className="overflow-x-auto">
-                    <table className="min-w-full divide-y divide-gray-700">
-                        <thead className="bg-gray-800/50">
-                            <tr>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">학생</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">출결</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">테스트 점수</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">과제</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">수업 태도</th>
-                                <th className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">비고</th>
-                            </tr>
-                        </thead>
-                        <tbody className="bg-transparent divide-y divide-gray-700/50">
-                            {studentsInClass.map(student => {
-                                const record = recordsData.get(student.id);
-                                if (!record) return null;
-
-                                return (
-                                    <tr key={student.id} className="hover:bg-gray-800/40 transition-colors">
-                                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{student.name}</td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <select value={record.attendance} onChange={e => handleRecordChange(student.id, 'attendance', e.target.value)} className="bg-gray-700 border-gray-600 rounded-md p-1.5 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
-                                                <option value="출석">출석</option>
-                                                <option value="지각">지각</option>
-                                                <option value="결석">결석</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <input type="number" value={record.testScore ?? ''} onChange={e => handleRecordChange(student.id, 'testScore', e.target.value)} className="w-20 bg-gray-700 border-gray-600 rounded-md p-1.5 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <input type="checkbox" checked={record.homeworkCompleted} onChange={e => handleRecordChange(student.id, 'homeworkCompleted', e.target.checked)} className="w-5 h-5 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600 focus:ring-2" />
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <select value={record.attitude} onChange={e => handleRecordChange(student.id, 'attitude', e.target.value)} className="bg-gray-700 border-gray-600 rounded-md p-1.5 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500">
-                                                <option>매우 좋음</option>
-                                                <option>보통</option>
-                                                <option>부족</option>
-                                            </select>
-                                        </td>
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <input type="text" value={record.notes} onChange={e => handleRecordChange(student.id, 'notes', e.target.value)} className="w-full min-w-[200px] bg-gray-700 border-gray-600 rounded-md p-1.5 text-sm text-white focus:ring-yellow-500 focus:border-yellow-500" />
-                                        </td>
-                                    </tr>
-                                )
-                            })}
-                        </tbody>
-                    </table>
-                     {studentsInClass.length === 0 && (
-                        <div className="text-center py-8 text-gray-400">
-                            선택한 반에 배정된 학생이 없습니다.
-                        </div>
-                    )}
-                </div>
-            </Card>
+            <div className="border-t border-gray-700/50 text-center text-gray-400 text-[10px] flex flex-col">
+                {labels.map((label, i) => (
+                    <div key={i} className="flex-1 flex items-center justify-center border-b border-dotted border-gray-700 last:border-b-0 py-1">{label}</div>
+                ))}
+            </div>
         </div>
     );
+}
+
+const AttendanceRecordView: React.FC<{ record?: LessonRecord }> = ({ record }) => {
+    const fields = [
+        <div className="flex justify-center items-center gap-2 px-1 text-[11px] w-full">
+            <span>{record?.attendance || '-'}</span>
+            <span>{record?.attitude || '-'}</span>
+            <span>{record?.homework || '-'}</span>
+        </div>,
+        <div className="flex justify-center items-center gap-2 px-1 truncate text-[11px] w-full">
+            <span>{record?.testScore1 || '-'}</span>/
+            <span>{record?.testScore2 || '-'}</span>/
+            <span>{record?.testScore3 || '-'}</span>
+        </div>,
+        <span className="truncate px-1" title={record?.main_textbook}>{record?.main_textbook || '-'}</span>,
+        <span className="truncate px-1" title={record?.supplementary_textbook}>{record?.supplementary_textbook || '-'}</span>,
+        <span className="truncate px-1" title={record?.reinforcement_textbook}>{record?.reinforcement_textbook || '-'}</span>,
+        <span className="truncate px-1" title={record?.requested_test}>{record?.requested_test || '-'}</span>,
+        <span className="truncate px-1" title={record?.notes}>{record?.notes || '-'}</span>,
+    ];
+
+    return (
+        <div className="h-full w-full text-xs text-center flex flex-col">
+            {fields.map((field, index) => (
+                <div key={index} className="flex-1 flex items-center justify-center border-b border-dotted border-gray-700 last:border-b-0">
+                    {field}
+                </div>
+            ))}
+        </div>
+    );
+};
+
+
+const AttendanceRecordEdit: React.FC<{
+    record?: LessonRecord,
+    onSave: (data: DailyRecordData) => void,
+    onCancel: () => void
+}> = ({ record, onSave, onCancel }) => {
+    const [formData, setFormData] = useState<DailyRecordData>({
+        attendance: record?.attendance || '출석',
+        testScore1: record?.testScore1 || null,
+        testScore2: record?.testScore2 || null,
+        testScore3: record?.testScore3 || null,
+        homework: record?.homework || 'A',
+        attitude: record?.attitude || '보통',
+        notes: record?.notes || '',
+        requested_test: record?.requested_test || '',
+        main_textbook: record?.main_textbook || '',
+        supplementary_textbook: record?.supplementary_textbook || '',
+        reinforcement_textbook: record?.reinforcement_textbook || '',
+    });
+
+    const handleChange = (field: keyof DailyRecordData, value: any) => {
+        setFormData(prev => ({ ...prev, [field]: value }));
+    };
+
+    const commonInputClass = "w-full bg-gray-800 border-gray-600 rounded p-1 text-white focus:outline-none focus:ring-1 focus:ring-yellow-500";
+    const commonSelectClass = `${commonInputClass} appearance-none`;
+
+    return (
+        <div className="absolute inset-0 bg-[#0d211c] p-1 z-10 border-2 border-yellow-500 rounded-md text-xs flex flex-col space-y-1">
+            <div className="grid grid-cols-3 gap-1">
+                <select value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}><option>출석</option><option>지각</option><option>결석</option></select>
+                <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}><option>매우 좋음</option><option>보통</option><option>부족</option></select>
+                <select value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
+            </div>
+            <div className="grid grid-cols-3 gap-1">
+                <input type="text" placeholder="점수1" value={formData.testScore1 ?? ''} onChange={e => handleChange('testScore1', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+                <input type="text" placeholder="점수2" value={formData.testScore2 ?? ''} onChange={e => handleChange('testScore2', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+                <input type="text" placeholder="점수3" value={formData.testScore3 ?? ''} onChange={e => handleChange('testScore3', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
+            </div>
+            <input type="text" placeholder="본교재" value={formData.main_textbook} onChange={e => handleChange('main_textbook', e.target.value)} className={commonInputClass} />
+            <input type="text" placeholder="부교재" value={formData.supplementary_textbook} onChange={e => handleChange('supplementary_textbook', e.target.value)} className={commonInputClass} />
+            <input type="text" placeholder="보강교재" value={formData.reinforcement_textbook} onChange={e => handleChange('reinforcement_textbook', e.target.value)} className={commonInputClass} />
+            <input type="text" placeholder="준비요청" value={formData.requested_test} onChange={e => handleChange('requested_test', e.target.value)} className={commonInputClass} />
+            <textarea placeholder="비고..." value={formData.notes} onChange={e => handleChange('notes', e.target.value)} rows={1} className={`${commonInputClass} resize-none`} />
+            <div className="flex justify-end space-x-1 pt-1">
+                <button onClick={onCancel} className="px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white">취소</button>
+                <button onClick={() => onSave(formData)} className="px-2 py-1 rounded bg-yellow-600 hover:bg-yellow-500 text-white font-semibold">저장</button>
+            </div>
+        </div>
+    );
+};
+
+// --- Main Component ---
+
+interface ClassAttendanceProps {
+  classes: Class[];
+  students: Student[];
+  teachers: Teacher[];
+  lessonRecords: LessonRecord[];
+  setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
+}
+
+const ClassAttendance: React.FC<ClassAttendanceProps> = ({ classes, students, lessonRecords, setLessonRecords }) => {
+  const [selectedClassId, setSelectedClassId] = useState<number | null>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [editingCell, setEditingCell] = useState<{ studentId: number; date: string } | null>(null);
+  const [studentNotes, setStudentNotes] = useState<Record<number, string>>({});
+  const [sentNotifications, setSentNotifications] = useState<Record<string, { sent: boolean, sending: boolean }>>({});
+
+  useEffect(() => {
+    // If classes are loaded and no class is selected, select the first one.
+    if (classes.length > 0 && !selectedClassId) {
+        setSelectedClassId(classes[0].id);
+    }
+    // If a class was selected, but it no longer exists (e.g., deleted),
+    // select the first available class.
+    if (selectedClassId && !classes.some(c => c.id === selectedClassId)) {
+        setSelectedClassId(classes[0]?.id || null);
+    }
+  }, [classes, selectedClassId]);
+
+  const handlePrevMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() - 1, 1));
+  const handleNextMonth = () => setCurrentDate(d => new Date(d.getFullYear(), d.getMonth() + 1, 1));
+  
+  const selectedClass = useMemo(() => classes.find(c => c.id === selectedClassId), [selectedClassId, classes]);
+
+  useEffect(() => {
+    const notes: Record<number, string> = {};
+    students.forEach(s => {
+        if (s.diagnosticTestNotes) {
+            notes[s.id] = s.diagnosticTestNotes;
+        }
+    });
+    setStudentNotes(notes);
+  }, [students]);
+
+  const studentsInClass = useMemo(() => {
+    if (!selectedClass) return [];
+    return selectedClass.studentIds
+      .map(id => students.find(s => s.id === id))
+      .filter((s): s is Student => !!s)
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }, [selectedClass, students]);
+
+  const classScheduleDays = useMemo(() => {
+      if (!selectedClass) return [];
+      const scheduleMap: { [key: string]: number } = { '일': 0, '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6 };
+      const scheduleString = selectedClass.schedule.split(' ')[0];
+      const days = scheduleString.split('/');
+      return days.map(day => scheduleMap[day]).filter(dayNum => dayNum !== undefined);
+  }, [selectedClass]);
+
+  const classDaysInMonth = useMemo(() => {
+      if (classScheduleDays.length === 0) return [];
+      const year = currentDate.getFullYear();
+      const month = currentDate.getMonth();
+      const days = [];
+      const date = new Date(year, month, 1);
+
+      while (date.getMonth() === month) {
+          if (classScheduleDays.includes(date.getDay())) {
+              days.push(new Date(date));
+          }
+          date.setDate(date.getDate() + 1);
+      }
+      return days;
+  }, [currentDate, classScheduleDays]);
+
+  const recordsMap = useMemo(() => {
+    return new Map(lessonRecords.map(r => [`${r.studentId}-${r.date}`, r]));
+  }, [lessonRecords]);
+  
+  const handleSaveRecord = (studentId: number, dateString: string, data: DailyRecordData) => {
+    setLessonRecords(prevRecords => {
+      const existingRecord = prevRecords.find(r => r.studentId === studentId && r.date === dateString);
+      if (existingRecord) {
+        return prevRecords.map(r => r.id === existingRecord.id ? { ...existingRecord, ...data } : r);
+      } else {
+        const newRecord: LessonRecord = { id: Date.now(), studentId, date: dateString, ...data };
+        return [...prevRecords, newRecord];
+      }
+    });
+    setEditingCell(null);
+  };
+
+  const handleSendNotification = (date: Date, isResend = false) => {
+    if (!selectedClassId) return;
+    const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
+    if (sentNotifications[key]?.sent && !isResend) return;
+
+    setSentNotifications(prev => ({ ...prev, [key]: { ...prev[key], sending: true } }));
+    setTimeout(() => {
+        setSentNotifications(prev => ({ ...prev, [key]: { sent: true, sending: false } }));
+    }, 1000);
+  };
+
+  const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
+
+  return (
+    <div className="flex flex-col h-full">
+      <h1 className="text-3xl font-bold text-white mb-4">수업 출석부</h1>
+
+      <div className="bg-[#1A3A32]/80 border border-gray-700/50 rounded-xl shadow-lg backdrop-blur-sm p-4 mb-4 flex justify-between items-center">
+         <div className="flex-1">
+            <label htmlFor="class-select" className="sr-only">반 선택</label>
+            <select
+              id="class-select"
+              value={selectedClassId || ''}
+              onChange={e => setSelectedClassId(Number(e.target.value))}
+              className="w-full max-w-xs bg-gray-800 border border-gray-600 rounded-md py-2 px-3 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+            >
+              {classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+            </select>
+          </div>
+          <div className="flex items-center justify-center bg-gray-800 border border-gray-600 rounded-md">
+                <button onClick={handlePrevMonth} className="px-4 py-2 text-white hover:bg-gray-700 rounded-l-md" aria-label="이전 달">‹</button>
+                <span className="w-40 text-center font-semibold text-white">
+                    {currentDate.getFullYear()}년 {currentDate.getMonth() + 1}월
+                </span>
+                <button onClick={handleNextMonth} className="px-4 py-2 text-white hover:bg-gray-700 rounded-r-md" aria-label="다음 달">›</button>
+            </div>
+            <div className="flex-1"></div>
+      </div>
+      
+      <div className="flex-grow overflow-auto border border-gray-700/50 rounded-xl bg-[#1A3A32]/50">
+          <table className="min-w-full border-collapse">
+            <thead className="bg-gray-800/80 backdrop-blur-sm">
+              <tr className="border-b border-gray-600">
+                <th scope="col" className="sticky left-0 z-10 bg-gray-800/80 px-2 py-2 text-xs font-bold text-gray-300 w-48 border-r border-gray-600">학생 정보</th>
+                <th scope="col" className="sticky left-48 z-10 bg-gray-800/80 px-2 py-2 text-xs font-bold text-gray-300 w-32 border-r border-gray-600">특이사항</th>
+                {classDaysInMonth.map(date => (
+                   <th key={date.toISOString()} scope="col" className="px-2 py-1 text-center text-xs font-bold text-gray-300 w-32 border-r border-gray-600">
+                    {date.getMonth() + 1}/{date.getDate()}<br/>({dayNames[date.getDay()]})
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="text-gray-300">
+              {studentsInClass.map((student, index) => (
+                <tr key={student.id} className="h-48 border-b border-gray-700/50">
+                  <td className="sticky left-0 bg-[#142f29]/90 p-0 align-top w-48 h-48 border-r border-gray-600">
+                      <StudentInfoCell student={student} index={index} />
+                  </td>
+                  <td className="sticky left-48 bg-[#142f29]/90 p-1 align-middle w-32 h-48 border-r border-gray-600">
+                    <textarea 
+                        value={studentNotes[student.id] || ''}
+                        onChange={e => setStudentNotes(p => ({...p, [student.id]: e.target.value}))}
+                        className="w-full bg-transparent text-center text-xs resize-none p-1 focus:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-yellow-500 rounded"
+                        placeholder="특이사항 입력..."
+                    />
+                  </td>
+                  {classDaysInMonth.map(date => {
+                     const dateString = date.toISOString().split('T')[0];
+                     const record = recordsMap.get(`${student.id}-${dateString}`);
+                     const isEditing = editingCell?.studentId === student.id && editingCell?.date === dateString;
+                     return (
+                       <td 
+                          key={dateString} 
+                          onClick={() => !isEditing && setEditingCell({ studentId: student.id, date: dateString })}
+                          className="p-0 align-top w-32 h-48 border-r border-gray-600 relative cursor-pointer hover:bg-gray-700/30"
+                       >
+                         {isEditing ? (
+                            <AttendanceRecordEdit 
+                                record={record}
+                                onSave={(data) => handleSaveRecord(student.id, dateString, data)}
+                                onCancel={() => setEditingCell(null)}
+                            />
+                         ) : (
+                           <AttendanceRecordView record={record} />
+                         )}
+                       </td>
+                     );
+                  })}
+                </tr>
+              ))}
+            </tbody>
+            <tfoot className="bg-gray-800/80 backdrop-blur-sm text-xs">
+                 <tr className="border-t-2 border-gray-600">
+                    <td colSpan={2} className="sticky left-0 bg-gray-800/80 px-2 py-2 text-center font-bold text-gray-300">알림톡 발송</td>
+                    {classDaysInMonth.map(date => {
+                        const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
+                        const status = sentNotifications[key];
+                        const isSent = status?.sent;
+                        const isSending = status?.sending;
+                        return (
+                             <td key={date.toISOString()} className="p-2 align-middle text-center border-r border-gray-600">
+                                {isSent ? (
+                                    <div className="flex flex-col items-center gap-1">
+                                        <span className="font-semibold text-green-400">발송완료</span>
+                                        <button onClick={() => handleSendNotification(date, true)} className="w-full text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white">
+                                            재발송
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <button 
+                                        onClick={() => handleSendNotification(date)} 
+                                        disabled={isSending}
+                                        className="w-full text-xs px-2 py-1.5 rounded bg-yellow-600 hover:bg-yellow-500 text-gray-900 font-bold disabled:bg-gray-500"
+                                    >
+                                        {isSending ? '전송중...' : '발송'}
+                                    </button>
+                                )}
+                            </td>
+                        )
+                    })}
+                 </tr>
+            </tfoot>
+          </table>
+      </div>
+    </div>
+  );
 };
 
 export default ClassAttendance;

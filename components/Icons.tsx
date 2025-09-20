@@ -92,3 +92,9 @@ export const EyeSlashIcon: React.FC<{ className?: string }> = ({ className }) =>
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.542-7 1.274-4.057 5.064-7 9.542-7 .847 0 1.673.124 2.468.352M4 4l16 16M10.75 10.75a3 3 0 004.5 4.5m-4.5-4.5V7.5a3 3 0 013 3h-3z" />
     </svg>
 );
+
+export const KakaoTalkIcon: React.FC<{ className?: string }> = ({ className }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} viewBox="0 0 24 24" fill="currentColor">
+        <path d="M12 2C6.48 2 2 6.04 2 11.01C2 13.98 3.53 16.62 6.01 18.24L5.5 22L9.3 20.1C10.18 20.36 11.08 20.5 12 20.5C17.52 20.5 22 16.46 22 11.49C22 6.52 17.52 2.5 12 2.5" transform="translate(0 -0.5)"></path>
+    </svg>
+);

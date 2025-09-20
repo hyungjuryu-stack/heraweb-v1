@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -75,7 +76,8 @@ const App: React.FC = () => {
             case 'lesson-records':
                 return <LessonRecords lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} students={data.students} />;
             case 'class-attendance':
-                return <ClassAttendance classes={data.classes} students={data.students} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
+                // FIX: Pass the required 'teachers' prop to the ClassAttendance component.
+                return <ClassAttendance classes={data.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
             case 'reports':
                 return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords}/>;
             case 'tuition':
