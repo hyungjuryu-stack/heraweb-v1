@@ -1,104 +1,108 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
 import Students from './pages/Students';
-import Classes from './pages/Classes';
-import Teachers from './pages/Teachers';
-import LessonRecords from './pages/LessonRecords';
+import TestGenerator from './pages/TestGenerator';
 import Reports from './pages/Reports';
+import Classes from './pages/Classes';
+import Schedule from './pages/Schedule';
+import LessonRecords from './pages/LessonRecords';
 import Tuition from './pages/Tuition';
 import Counseling from './pages/Counseling';
-import Schedule from './pages/Schedule';
 import MeetingNotes from './pages/MeetingNotes';
-import TestGenerator from './pages/TestGenerator';
 import ClassAttendance from './pages/ClassAttendance';
-import ComingSoon from './pages/ComingSoon';
-import type { Page } from './types';
+import Teachers from './pages/Teachers';
+import LoginPage from './pages/LoginPage';
+import MyPage from './pages/MyPage';
 import { useMockData } from './hooks/useMockData';
+import { useAuth } from './hooks/useAuth';
+import type { Page } from './types';
 
 const App: React.FC = () => {
-  const [currentPage, setCurrentPage] = useState<Page>('dashboard');
-  const allData = useMockData();
+    const data = useMockData();
+    const auth = useAuth();
+    const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
-  const renderPage = useCallback(() => {
-    switch (currentPage) {
-      case 'dashboard':
-        return <Dashboard dashboardData={allData.dashboardData} />;
-      case 'students':
-        return <Students 
-            students={allData.students} setStudents={allData.setStudents}
-            classes={allData.classes} setClasses={allData.setClasses}
-            teachers={allData.teachers}
-            setLessonRecords={allData.setLessonRecords}
-            setMonthlyReports={allData.setMonthlyReports}
-            setTuitions={allData.setTuitions}
-            setCounselings={allData.setCounselings}
-        />;
-      case 'classes':
-        return <Classes 
-            classes={allData.classes} setClasses={allData.setClasses}
-            teachers={allData.teachers}
-            students={allData.students} setStudents={allData.setStudents}
-        />;
-      case 'teachers':
-        return <Teachers
-            teachers={allData.teachers} setTeachers={allData.setTeachers}
-            setStudents={allData.setStudents}
-            setClasses={allData.setClasses}
-        />;
-      case 'lesson-records':
-        return <LessonRecords 
-            lessonRecords={allData.lessonRecords} setLessonRecords={allData.setLessonRecords}
-            students={allData.students}
-        />;
-      case 'class-attendance':
-          return <ClassAttendance 
-              classes={allData.classes}
-              students={allData.students}
-              lessonRecords={allData.lessonRecords}
-              setLessonRecords={allData.setLessonRecords}
-          />;
-      case 'reports':
-        return <Reports 
-            monthlyReports={allData.monthlyReports} setMonthlyReports={allData.setMonthlyReports}
-            students={allData.students}
-            teachers={allData.teachers}
-        />;
-      case 'tuition':
-        return <Tuition 
-            tuitions={allData.tuitions} setTuitions={allData.setTuitions}
-            students={allData.students}
-        />;
-      case 'counseling':
-        return <Counseling 
-            counselings={allData.counselings} setCounselings={allData.setCounselings}
-            students={allData.students}
-            teachers={allData.teachers}
-        />;
-      case 'schedule':
-        return <Schedule 
-            academyEvents={allData.academyEvents} setAcademyEvents={allData.setAcademyEvents}
-        />;
-      case 'meeting-notes':
-        return <MeetingNotes 
-            meetingNotes={allData.meetingNotes} setMeetingNotes={allData.setMeetingNotes}
-            teachers={allData.teachers}
-        />;
-      case 'test-generator':
-        return <TestGenerator />;
-      default:
-        return <ComingSoon pageName={currentPage} />;
+    useEffect(() => {
+        // This effect handles automatic navigation.
+        // When a user logs in with a temporary password, they are directed to 'mypage'.
+        if (auth.user?.mustChangePassword) {
+            setCurrentPage('mypage');
+        }
+    }, [auth.user]);
+    
+    if (!auth.user) {
+        return <LoginPage auth={auth} />;
     }
-  }, [currentPage, allData]);
 
-  return (
-    <div className="flex h-screen bg-[#1A3A32] text-gray-200">
-      <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} />
-      <main className="flex-1 overflow-y-auto p-8 bg-gray-900/50">
-        {renderPage()}
-      </main>
-    </div>
-  );
+    // If a password change is required, render a locked-down UI that only shows the MyPage component.
+    // Navigation via the sidebar is disabled until the password is changed.
+    if (auth.user.mustChangePassword) {
+        return (
+            <div className="flex h-screen bg-[#0d211c] text-white">
+                <Sidebar 
+                    currentPage="mypage" // Lock the active page display to 'mypage'
+                    setCurrentPage={() => {}} // Disable sidebar navigation
+                    user={auth.user} 
+                    onLogout={auth.logout} 
+                />
+                <main className="flex-1 p-8 overflow-y-auto">
+                    <MyPage user={auth.user} onChangePassword={auth.changePassword} />
+                </main>
+            </div>
+        );
+    }
+    
+    // Normal application flow when no password change is required.
+    const renderPage = () => {
+        switch (currentPage) {
+            case 'dashboard':
+                return <Dashboard dashboardData={data.dashboardData} />;
+            case 'students':
+                return <Students 
+                    students={data.students} setStudents={data.setStudents}
+                    classes={data.classes} setClasses={data.setClasses}
+                    teachers={data.teachers}
+                    monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports}
+                    tuitions={data.tuitions} setTuitions={data.setTuitions}
+                    counselings={data.counselings} setCounselings={data.setCounselings}
+                    setLessonRecords={data.setLessonRecords}
+                 />;
+            case 'classes':
+                return <Classes classes={data.classes} setClasses={data.setClasses} teachers={data.teachers} students={data.students} setStudents={data.setStudents} />;
+            case 'teachers':
+                return <Teachers teachers={data.teachers} setTeachers={data.setTeachers} setStudents={data.setStudents} setClasses={data.setClasses} />;
+            case 'lesson-records':
+                return <LessonRecords lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} students={data.students} />;
+            case 'class-attendance':
+                return <ClassAttendance classes={data.classes} students={data.students} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
+            case 'reports':
+                return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords}/>;
+            case 'tuition':
+                return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} />;
+            case 'counseling':
+                return <Counseling counselings={data.counselings} setCounselings={data.setCounselings} students={data.students} teachers={data.teachers} />;
+            case 'schedule':
+                return <Schedule academyEvents={data.academyEvents} setAcademyEvents={data.setAcademyEvents} />;
+            case 'meeting-notes':
+                return <MeetingNotes meetingNotes={data.meetingNotes} setMeetingNotes={data.setMeetingNotes} teachers={data.teachers} />;
+            case 'test-generator':
+                return <TestGenerator />;
+            case 'mypage':
+                return auth.user ? <MyPage user={auth.user} onChangePassword={auth.changePassword} /> : null;
+            default:
+                return <Dashboard dashboardData={data.dashboardData} />;
+        }
+    };
+
+    return (
+        <div className="flex h-screen bg-[#0d211c] text-white">
+            <Sidebar currentPage={currentPage} setCurrentPage={setCurrentPage} user={auth.user} onLogout={auth.logout} />
+            <main className="flex-1 p-8 overflow-y-auto">
+                {renderPage()}
+            </main>
+        </div>
+    );
 };
 
 export default App;

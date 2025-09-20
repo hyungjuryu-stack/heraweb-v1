@@ -16,9 +16,11 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [expandedClassId, setExpandedClassId] = useState<number | null>(null);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
   
   const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
+  const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
 
   const sortedClasses = useMemo(() => {
     let sortableItems = [...classes];
@@ -92,16 +94,23 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
     setSelectedClass(null);
   };
 
-  const handleSaveClass = (classData: Omit<Class, 'id' | 'studentIds'> & { id?: number }) => {
-    if (classData.id) {
-      setClasses(classes.map(c => c.id === classData.id ? { ...c, ...classData } : c));
+  const handleSaveClass = (classData: Omit<Class, 'id' | 'studentIds'> & { id?: number; studentSchedules?: Required<Class>['studentSchedules'] }) => {
+    const { studentSchedules, ...restOfClassData } = classData;
+
+    if (restOfClassData.id) {
+        setClasses(classes.map(c => 
+            c.id === restOfClassData.id 
+                ? { ...c, ...restOfClassData, studentSchedules: studentSchedules || c.studentSchedules } 
+                : c
+        ));
     } else {
-      const newClass: Class = {
-        ...classData,
-        id: Date.now(),
-        studentIds: [],
-      };
-      setClasses([...classes, newClass]);
+        const newClass: Class = {
+            ...restOfClassData,
+            id: Date.now(),
+            studentIds: [],
+            studentSchedules: studentSchedules || [],
+        };
+        setClasses([...classes, newClass]);
     }
     handleCloseModal();
   };
@@ -122,9 +131,26 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
 
   const handleDeleteSelected = () => {
       if (window.confirm(`${selectedIds.length}개의 반을 정말로 삭제하시겠습니까? 해당 반에 속한 학생들은 "미배정" 상태가 됩니다.`)) {
-          setStudents(prev => prev.map(s =>
-              selectedIds.includes(s.currentClassId ?? -1) ? { ...s, currentClassId: null, teacherId: null } : s
-          ));
+          // FIX: Property 'currentClassId' does not exist on type 'Student'.
+          // Updated to correctly check both 'regularClassId' and 'advancedClassId' for each student,
+          // and unassign them if their class is being deleted.
+          setStudents(prev => prev.map(s => {
+              const isRegularClassDeleted = s.regularClassId && selectedIds.includes(s.regularClassId);
+              const isAdvancedClassDeleted = s.advancedClassId && selectedIds.includes(s.advancedClassId);
+
+              if (isRegularClassDeleted || isAdvancedClassDeleted) {
+                  const updatedStudent = { ...s };
+                  if (isRegularClassDeleted) {
+                      updatedStudent.regularClassId = null;
+                      updatedStudent.teacherId = null;
+                  }
+                  if (isAdvancedClassDeleted) {
+                      updatedStudent.advancedClassId = null;
+                  }
+                  return updatedStudent;
+              }
+              return s;
+          }));
           setClasses(prev => prev.filter(c => !selectedIds.includes(c.id)));
           setSelectedIds([]);
       }
@@ -209,27 +235,61 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
             </thead>
             <tbody className="bg-transparent divide-y divide-gray-700/50">
               {sortedClasses.map((classItem) => (
-                <tr key={classItem.id} className="hover:bg-gray-800/40 transition-colors">
-                  <td className="w-4 p-4">
-                      <div className="flex items-center">
-                          <input id={`checkbox-${classItem.id}`} type="checkbox"
-                              checked={selectedIds.includes(classItem.id)}
-                              onChange={() => handleSelectItem(classItem.id)}
-                              className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600 focus:ring-2" />
-                          <label htmlFor={`checkbox-${classItem.id}`} className="sr-only">checkbox</label>
-                      </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{classItem.name}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(classItem.teacherId)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade.join(', ')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{`${classItem.studentIds.length}명`}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.schedule}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.room}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.capacity}명</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <button onClick={() => handleEditClass(classItem)} className="text-yellow-400 hover:text-yellow-300">상세</button>
-                  </td>
-                </tr>
+                <React.Fragment key={classItem.id}>
+                  <tr 
+                    className={`hover:bg-gray-800/40 transition-colors cursor-pointer ${expandedClassId === classItem.id ? 'bg-gray-800/60' : ''}`}
+                    onClick={() => setExpandedClassId(prev => (prev === classItem.id ? null : classItem.id))}
+                  >
+                    <td className="w-4 p-4">
+                        <div className="flex items-center">
+                            <input id={`checkbox-${classItem.id}`} type="checkbox"
+                                checked={selectedIds.includes(classItem.id)}
+                                onChange={() => handleSelectItem(classItem.id)}
+                                onClick={(e) => e.stopPropagation()}
+                                className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600 focus:ring-2" />
+                            <label htmlFor={`checkbox-${classItem.id}`} className="sr-only">checkbox</label>
+                        </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{classItem.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(classItem.teacherId)}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade.join(', ')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{`${classItem.studentIds.length}명`}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.schedule}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.room}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.capacity}명</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <button 
+                          onClick={(e) => { e.stopPropagation(); handleEditClass(classItem); }} 
+                          className="text-yellow-400 hover:text-yellow-300"
+                        >
+                          상세
+                        </button>
+                    </td>
+                  </tr>
+                  {expandedClassId === classItem.id && (
+                     <tr className="bg-gray-800/20">
+                      <td colSpan={headers.length + 2} className="p-0">
+                        <div className="p-4 bg-gray-900/30">
+                          <h4 className="text-md font-bold text-[#E5A823] mb-3">{classItem.name} 학생 명단</h4>
+                          <p className="text-sm text-gray-300 mb-3"><span className="font-semibold">담당 강사:</span> {teacherMap.get(classItem.teacherId)}</p>
+                          
+                          {classItem.studentIds.length > 0 ? (
+                            <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                              {classItem.studentIds.map(studentId => {
+                                const studentName = studentMap.get(studentId);
+                                return studentName ? (
+                                  <li key={studentId} className="bg-gray-700/50 p-2 rounded-md text-center text-sm text-gray-200 truncate">{studentName}</li>
+                                ) : null;
+                              })}
+                            </ul>
+                          ) : (
+                            <p className="text-gray-500 text-center py-4">배정된 학생이 없습니다.</p>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
               ))}
             </tbody>
           </table>
@@ -241,6 +301,7 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
         onSave={handleSaveClass}
         classData={selectedClass}
         teachers={teachers}
+        students={students}
       />
     </div>
   );

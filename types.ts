@@ -1,22 +1,8 @@
-export type Page = 
-  'dashboard' | 
-  'students' | 
-  'classes' | 
-  'teachers' |
-  'lesson-records' | 
-  'class-attendance' |
-  'reports' | 
-  'tuition' | 
-  'counseling' | 
-  'schedule' | 
-  'meeting-notes' | 
-  'test-generator';
-
 export enum StudentStatus {
+  ENROLLED = '재원',
   CONSULTING = '상담',
   WAITING = '대기',
-  ENROLLED = '재원',
-  WITHDRAWN = '퇴원'
+  WITHDRAWN = '퇴원',
 }
 
 export interface Student {
@@ -29,22 +15,22 @@ export interface Student {
   enrollmentDate: string;
   withdrawalDate?: string;
   status: StudentStatus;
-  siblings: number[];
+  siblings: number[]; // Array of student IDs
   studentPhone: string;
   motherName: string;
   motherPhone: string;
-  fatherName?: string;
-  fatherPhone?: string;
+  fatherName: string;
+  fatherPhone: string;
   sendSmsToBoth: boolean;
   tuitionPayer: '모' | '부';
-  currentClassId: number | null;
+  regularClassId: number | null;
+  advancedClassId: number | null;
   teacherId: number | null;
-  diagnosticTestScore?: number | null;
-  diagnosticTestNotes?: string;
-  // For display/mock purposes, in a real app these would be calculated
   avgScore: number;
   attendanceRate: number;
   homeworkRate: number;
+  diagnosticTestScore: string | null;
+  diagnosticTestNotes: string;
 }
 
 export interface Class {
@@ -56,15 +42,20 @@ export interface Class {
   schedule: string;
   room: string;
   capacity: number;
+  studentSchedules?: { studentId: number; startTime: string; endTime: string; }[];
 }
+
+export type Position = '원장' | '강사' | '직원';
 
 export interface Teacher {
   id: number;
   name: string;
+  position: Position;
+  role: 'admin' | 'operator' | 'teacher';
   hireDate: string;
-  resignationDate?: string;
   phone: string;
   email: string;
+  resignationDate: string;
 }
 
 export interface LessonRecord {
@@ -81,7 +72,7 @@ export interface LessonRecord {
 export interface MonthlyReport {
   id: number;
   studentId: number;
-  period: '주간' | '월간';
+  period: string;
   attendanceRate: number;
   avgScore: number;
   homeworkRate: number;
@@ -89,19 +80,20 @@ export interface MonthlyReport {
   sentDate: string;
   teacherId: number;
   reviewText: string;
+  sentStatus: '발송완료' | '미발송';
 }
 
 export interface Tuition {
   id: number;
   studentId: number;
-  course: '초등' | '중등' | '고등';
+  course: string;
   plan: string;
   baseFee: number;
   siblingDiscount: boolean;
   totalFee: number;
   cashReceiptPhone: string;
-  paymentMethod: '현금' | '카드';
-  paymentStatus: '미결제' | '결제완료';
+  paymentMethod: '카드' | '현금' | '이체';
+  paymentStatus: '결제완료' | '미결제';
 }
 
 export interface Counseling {
@@ -132,18 +124,37 @@ export interface MeetingNote {
     agenda: string;
     content: string;
     decisions: string;
-    actionItems: { task: string, 담당자Id: number, dueDate: string }[];
-}
-
-
-export interface GeneratedQuestion {
-  question: string;
-  options?: string[];
-  answer: string;
-  type: 'multiple-choice' | 'short-answer';
+    actionItems: { task: string; 담당자Id: number; dueDate: string }[];
 }
 
 export interface GeneratedTest {
   title: string;
-  questions: GeneratedQuestion[];
+  questions: {
+    question: string;
+    options?: string[];
+    answer: string;
+    type: 'multiple-choice' | 'short-answer';
+  }[];
+}
+
+export type Page = 
+  | 'dashboard'
+  | 'students'
+  | 'classes'
+  | 'teachers'
+  | 'lesson-records'
+  | 'class-attendance'
+  | 'reports'
+  | 'tuition'
+  | 'counseling'
+  | 'schedule'
+  | 'meeting-notes'
+  | 'test-generator'
+  | 'mypage';
+
+export interface User {
+  id: string;
+  name: string;
+  role: 'admin' | 'operator' | 'teacher';
+  mustChangePassword?: boolean;
 }

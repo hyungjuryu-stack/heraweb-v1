@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import type { Teacher } from '../types';
+import type { Teacher, Position } from '../types';
 import Card from './ui/Card';
 
 interface TeacherModalProps {
@@ -11,11 +11,15 @@ interface TeacherModalProps {
 
 const defaultFormData: Omit<Teacher, 'id'> = {
     name: '',
+    position: '강사',
+    role: 'teacher',
     hireDate: new Date().toISOString().split('T')[0],
     resignationDate: '',
     phone: '',
     email: ''
 };
+
+const positionOptions: Position[] = ['원장', '강사', '직원'];
 
 const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, teacher }) => {
   const [formData, setFormData] = useState(defaultFormData);
@@ -25,6 +29,9 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
         if (teacher) {
             setFormData({
                 name: teacher.name,
+                position: teacher.position,
+                // 'operator' role is shown as 'admin' in the dropdown and will be saved as 'admin'.
+                role: teacher.role === 'operator' ? 'admin' : teacher.role,
                 hireDate: teacher.hireDate,
                 resignationDate: teacher.resignationDate || '',
                 phone: teacher.phone,
@@ -36,7 +43,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
     }
   }, [isOpen, teacher]);
   
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData(prev => ({ ...prev, [name]: value }));
   }
@@ -57,7 +64,7 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
           <form onSubmit={handleSubmit}>
             <div className="space-y-4">
               <div>
-                <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">강사 이름</label>
+                <label htmlFor="name" className="block text-sm font-medium text-gray-300 mb-1">이름</label>
                 <input
                   type="text"
                   name="name"
@@ -68,6 +75,33 @@ const TeacherModal: React.FC<TeacherModalProps> = ({ isOpen, onClose, onSave, te
                   className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
                   autoFocus
                 />
+              </div>
+               <div>
+                <label htmlFor="position" className="block text-sm font-medium text-gray-300 mb-1">직위</label>
+                <select
+                  name="position"
+                  id="position"
+                  value={formData.position}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+                >
+                  {positionOptions.map(pos => <option key={pos} value={pos}>{pos}</option>)}
+                </select>
+              </div>
+              <div>
+                <label htmlFor="role" className="block text-sm font-medium text-gray-300 mb-1">권한</label>
+                <select
+                  name="role"
+                  id="role"
+                  value={formData.role}
+                  onChange={handleChange}
+                  required
+                  className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+                >
+                  <option value="admin">관리자 권한</option>
+                  <option value="teacher">강사 권한</option>
+                </select>
               </div>
               <div>
                 <label htmlFor="phone" className="block text-sm font-medium text-gray-300 mb-1">연락처</label>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import type { Student, Class, Teacher } from '../types';
 import { StudentStatus } from '../types';
 import Card from './ui/Card';
@@ -33,12 +33,16 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
       fatherPhone: '',
       sendSmsToBoth: false,
       tuitionPayer: '모',
-      currentClassId: null,
+      regularClassId: null,
+      advancedClassId: null,
       teacherId: null,
       diagnosticTestScore: null,
       diagnosticTestNotes: '',
   });
   const [idError, setIdError] = useState<string | null>(null);
+
+  const regularClasses = useMemo(() => classes.filter(c => !c.name.startsWith('수')), [classes]);
+  const advancedClasses = useMemo(() => classes.filter(c => c.name.startsWith('수')), [classes]);
 
   useEffect(() => {
     if (student) {
@@ -59,7 +63,8 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
         fatherPhone: student.fatherPhone || '',
         sendSmsToBoth: student.sendSmsToBoth,
         tuitionPayer: student.tuitionPayer,
-        currentClassId: student.currentClassId,
+        regularClassId: student.regularClassId,
+        advancedClassId: student.advancedClassId,
         teacherId: student.teacherId,
         diagnosticTestScore: student.diagnosticTestScore ?? null,
         diagnosticTestNotes: student.diagnosticTestNotes || '',
@@ -82,7 +87,8 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
             fatherPhone: '',
             sendSmsToBoth: false,
             tuitionPayer: '모',
-            currentClassId: null,
+            regularClassId: null,
+            advancedClassId: null,
             teacherId: null,
             diagnosticTestScore: null,
             diagnosticTestNotes: '',
@@ -90,6 +96,15 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
     }
     setIdError(null);
   }, [student, isOpen]);
+
+  useEffect(() => {
+    if (formData.regularClassId) {
+        const selectedClass = classes.find(c => c.id === formData.regularClassId);
+        if (selectedClass) {
+            setFormData(prev => ({...prev, teacherId: selectedClass.teacherId}));
+        }
+    }
+  }, [formData.regularClassId, classes]);
   
   const handleIdChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newId = e.target.value;
@@ -124,10 +139,10 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
     if (type === 'checkbox') {
         const { checked } = e.target as HTMLInputElement;
         setFormData(prev => ({ ...prev, [name]: checked }));
-    } else if (name === 'currentClassId' || name === 'teacherId') {
+    } else if (name === 'regularClassId' || name === 'advancedClassId' || name === 'teacherId') {
         setFormData(prev => ({...prev, [name]: value ? parseInt(value, 10) : null}));
     } else if (name === 'diagnosticTestScore') {
-        setFormData(prev => ({...prev, [name]: value === '' ? null : parseInt(value, 10)}));
+        setFormData(prev => ({...prev, [name]: value === '' ? null : value}));
     }
     else {
         setFormData(prev => ({ ...prev, [name]: value }));
@@ -217,10 +232,19 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
                     <input type="date" name="withdrawalDate" id="withdrawalDate" value={formData.withdrawalDate} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
                   </div>
                   <div>
-                    <label htmlFor="currentClassId" className="block text-sm font-medium text-gray-300 mb-1">현재 반</label>
-                    <select name="currentClassId" id="currentClassId" value={formData.currentClassId || ''} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
+                    <label htmlFor="regularClassId" className="block text-sm font-medium text-gray-300 mb-1">정규수업반</label>
+                    <select name="regularClassId" id="regularClassId" value={formData.regularClassId || ''} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
                         <option value="">반 배정 없음</option>
-                        {classes.map(c => (
+                        {regularClasses.map(c => (
+                            <option key={c.id} value={c.id}>{c.name}</option>
+                        ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label htmlFor="advancedClassId" className="block text-sm font-medium text-gray-300 mb-1">현행심화반</label>
+                    <select name="advancedClassId" id="advancedClassId" value={formData.advancedClassId || ''} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
+                        <option value="">반 배정 없음</option>
+                        {advancedClasses.map(c => (
                             <option key={c.id} value={c.id}>{c.name}</option>
                         ))}
                     </select>
@@ -231,10 +255,6 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
                         <option value="">담당 없음</option>
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
-                  </div>
-                  <div>
-                    <label htmlFor="diagnosticTestScore" className="block text-sm font-medium text-gray-300 mb-1">진단테스트 성적</label>
-                    <input type="number" name="diagnosticTestScore" id="diagnosticTestScore" value={formData.diagnosticTestScore ?? ''} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
                   </div>
                 </div>
                 
@@ -262,6 +282,18 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
                       <option value="모">모</option>
                       <option value="부">부</option>
                     </select>
+                  </div>
+                   <div>
+                    <label htmlFor="diagnosticTestScore" className="block text-sm font-medium text-gray-300 mb-1">진단테스트 성적</label>
+                    <input 
+                      type="text" 
+                      name="diagnosticTestScore" 
+                      id="diagnosticTestScore" 
+                      value={formData.diagnosticTestScore ?? ''} 
+                      onChange={handleChange} 
+                      className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+                      placeholder="예: 85 또는 17/20"
+                    />
                   </div>
                 </div>
               </div>

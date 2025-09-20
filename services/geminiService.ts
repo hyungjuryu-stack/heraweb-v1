@@ -1,6 +1,5 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Student, GeneratedTest } from '../types';
+import type { Student, GeneratedTest, LessonRecord } from '../types';
 
 if (!process.env.API_KEY) {
   // This is a placeholder for environments where the key is not set.
@@ -84,20 +83,32 @@ export const generateTest = async (grade: string, unit: string, numQuestions: nu
 };
 
 
-export const generateStudentReview = async (student: Student): Promise<string> => {
+export const generateStudentReview = async (student: Student, studentRecords: LessonRecord[], teacherName: string | null): Promise<string> => {
   try {
+    const recordsSummary = studentRecords.length > 0
+      ? `최근 수업 기록 요약:\n` + studentRecords.slice(-5).map(r => 
+          `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homeworkCompleted ? '완료' : '미완료'}), 노트: ${r.notes || '없음'}`
+        ).join('\n')
+      : "최근 수업 기록이 없습니다.";
+
     const prompt = `
-      다음 학생 데이터를 바탕으로 학부모님께 보낼 월간 리포트 리뷰 문구를 전문적이고 긍정적인 톤으로 작성해줘. 개선이 필요한 부분은 부드럽게 표현해줘.
-      
+      다음 학생 데이터를 바탕으로 학부모님께 보낼 리포트 리뷰 문구를 전문적이고 긍정적인 톤으로 작성해줘. 개선이 필요한 부분은 부드럽게 표현해줘.
+
+      **학생 기본 정보:**
       - 학생 이름: ${student.name}
       - 학년: ${student.grade}
+      - 담당 교사: ${teacherName ?? '미배정'}
+
+      **정량 데이터:**
       - 평균 점수: ${student.avgScore}점
       - 출석률: ${student.attendanceRate}%
       - 과제 제출률: ${student.homeworkRate}%
-      {/* FIX: The 'Student' type has 'teacherId', not 'teacher'. Using 'teacherId' and handling null. */}
-      - 담당 교사: ${student.teacherId ?? '미배정'}
 
-      리뷰는 2~3문장으로 요약해줘.
+      **참고 자료:**
+      - 진단 테스트 총평: ${student.diagnosticTestNotes || '없음'}
+      - ${recordsSummary}
+
+      위 모든 정보를 종합적으로 고려하여 학생의 현재 학습 상태를 분석하고, 강점과 보완점을 포함한 종합적인 리뷰를 3~4문장으로 작성해줘.
     `;
     
     const response = await ai.models.generateContent({

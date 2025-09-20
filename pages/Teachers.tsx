@@ -2,6 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { Teacher, Student, Class } from '../types';
 import TeacherModal from '../components/TeacherModal';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 interface TeachersPageProps {
   teachers: Teacher[];
@@ -15,7 +16,14 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Teacher, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
+
+  const roleNameMap: Record<Teacher['role'], string> = {
+    admin: '관리자',
+    operator: '운영자',
+    teacher: '강사',
+  };
 
   const sortedTeachers = useMemo(() => {
     let sortableItems = [...teachers];
@@ -72,9 +80,9 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
 
   const handleSaveTeacher = (teacherData: Omit<Teacher, 'id'> & { id?: number }) => {
     if (teacherData.id) {
-        setTeachers(prev => prev.map(t => t.id === teacherData.id ? { ...t, ...teacherData } : t));
+        setTeachers(prev => prev.map(t => t.id === teacherData.id ? { ...t, ...teacherData } as Teacher : t));
     } else {
-        const newTeacher = { ...teacherData, id: Date.now() };
+        const newTeacher: Teacher = { ...teacherData, id: Date.now() };
         setTeachers(prev => [...prev, newTeacher]);
     }
     handleCloseModal();
@@ -94,13 +102,18 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
       );
   };
 
-  const handleDeleteSelected = () => {
-    if (window.confirm(`${selectedIds.length}명의 강사를 정말로 삭제하시겠습니까? 해당 강사가 배정된 반과 학생 정보에서 강사 배정이 해제됩니다.`)) {
-      setTeachers(prev => prev.filter(t => !selectedIds.includes(t.id)));
-      setClasses(prev => prev.map(c => selectedIds.includes(c.teacherId) ? { ...c, teacherId: 0 } : c));
-      setStudents(prev => prev.map(s => selectedIds.includes(s.teacherId ?? -1) ? { ...s, teacherId: null } : s));
-      setSelectedIds([]);
+  const handleOpenDeleteConfirmModal = () => {
+    if (selectedIds.length > 0) {
+      setIsConfirmModalOpen(true);
     }
+  };
+
+  const handleConfirmDelete = () => {
+    setTeachers(prev => prev.filter(t => !selectedIds.includes(t.id)));
+    setClasses(prev => prev.map(c => selectedIds.includes(c.teacherId) ? { ...c, teacherId: 0 } : c));
+    setStudents(prev => prev.map(s => selectedIds.includes(s.teacherId ?? -1) ? { ...s, teacherId: null } : s));
+    setSelectedIds([]);
+    setIsConfirmModalOpen(false);
   };
 
   const handleSelectAllClick = () => setSelectedIds(sortedTeachers.map(t => t.id));
@@ -109,6 +122,8 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
   const headers: { key: keyof Teacher; label: string }[] = [
       { key: 'id', label: '강사 ID' },
       { key: 'name', label: '이름' },
+      { key: 'position', label: '직위' },
+      { key: 'role', label: '권한' },
       { key: 'phone', label: '연락처' },
       { key: 'email', label: '이메일' },
       { key: 'hireDate', label: '입사일' },
@@ -128,7 +143,7 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
           <div className="flex items-center gap-2">
               <button onClick={handleSelectAllClick} className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors text-sm">전체 선택</button>
               <button onClick={handleDeselectAllClick} disabled={selectedIds.length === 0} className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-sm">선택 취소</button>
-              <button onClick={handleDeleteSelected} disabled={selectedIds.length === 0} className="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed text-sm">선택 항목 삭제</button>
+              <button onClick={handleOpenDeleteConfirmModal} disabled={selectedIds.length === 0} className="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed text-sm">선택 항목 삭제</button>
           </div>
       </div>
 
@@ -144,7 +159,8 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
                   </div>
                 </th>
                 {headers.map(({ key, label }) => (
-                  <th key={key} scope="col" onClick={() => requestSort(key)} className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer select-none">
+                  // FIX: Changed `key={key}` to `key={String(key)}` to avoid potential type errors with React keys.
+                  <th key={String(key)} scope="col" onClick={() => requestSort(key)} className="px-6 py-3 text-left text-xs font-bold text-gray-300 uppercase tracking-wider cursor-pointer select-none">
                     {label}
                     <span className="ml-1">{getSortIndicator(key)}</span>
                   </th>
@@ -165,6 +181,8 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.id}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{teacher.name}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.position}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{roleNameMap[teacher.role]}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.phone}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.email}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacher.hireDate}</td>
@@ -183,6 +201,23 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
         onSave={handleSaveTeacher} 
         teacher={selectedTeacher} 
       />
+      <ConfirmationModal
+        isOpen={isConfirmModalOpen}
+        onClose={() => setIsConfirmModalOpen(false)}
+        onConfirm={handleConfirmDelete}
+        title="강사 삭제 확인"
+      >
+        <p>정말로 다음 {selectedIds.length}명의 강사를 삭제하시겠습니까?</p>
+        <ul className="list-disc list-inside mt-2 bg-gray-800/50 p-3 rounded-md max-h-40 overflow-y-auto">
+            {teachers
+                .filter(t => selectedIds.includes(t.id))
+                .map(t => <li key={t.id}>{t.name}</li>)
+            }
+        </ul>
+        <p className="mt-4 text-sm text-yellow-400/90">
+            해당 강사가 배정된 반과 학생 정보에서 강사 배정이 해제됩니다. 이 작업은 되돌릴 수 없습니다.
+        </p>
+      </ConfirmationModal>
     </div>
   );
 };

@@ -1,22 +1,76 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import type { MonthlyReport, Student, Teacher } from '../types';
-import { generateStudentReview } from '../services/geminiService';
+import type { MonthlyReport, Student, Teacher, LessonRecord } from '../types';
+import ReportModal from '../components/ReportModal';
+import { StudentStatus } from '../types';
+
+const SentStatusBadge: React.FC<{ status: MonthlyReport['sentStatus'] }> = ({ status }) => {
+    const colorMap = {
+        '발송완료': 'bg-green-500/20 text-green-300 border border-green-500/30',
+        '미발송': 'bg-gray-500/20 text-gray-400 border border-gray-500/30',
+    };
+    return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorMap[status]}`}>{status}</span>;
+}
 
 interface ReportsPageProps {
     monthlyReports: MonthlyReport[];
     setMonthlyReports: React.Dispatch<React.SetStateAction<MonthlyReport[]>>;
     students: Student[];
     teachers: Teacher[];
+    lessonRecords: LessonRecord[];
 }
 
-const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports, students, teachers }) => {
+const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports, students, teachers, lessonRecords }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'sentDate', direction: 'descending' });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
+    const [isModalOpen, setIsModalOpen] = useState(false);
+    const [editingReport, setEditingReport] = useState<MonthlyReport | null>(null);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
     const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
+
+    const handleAddNewReport = () => {
+        setEditingReport(null);
+        setIsModalOpen(true);
+    };
+
+    const handleEditReport = (report: MonthlyReport) => {
+        setEditingReport(report);
+        setIsModalOpen(true);
+    };
+
+    const handleCloseModal = () => {
+        setIsModalOpen(false);
+        setEditingReport(null);
+    };
+
+    const handleSaveReport = (reportData: Omit<MonthlyReport, 'id' | 'sentStatus'> & { id?: number }) => {
+        if (reportData.id) {
+            setMonthlyReports(prev => prev.map(r => r.id === reportData.id ? { ...r, ...reportData } : r));
+        } else {
+            const newReport: MonthlyReport = {
+                id: Date.now(),
+                ...reportData,
+                sentStatus: '미발송',
+            };
+            setMonthlyReports(prev => [...prev, newReport]);
+        }
+        handleCloseModal();
+    };
+    
+    const handleSendReport = (reportId: number) => {
+        const report = monthlyReports.find(r => r.id === reportId);
+        const student = students.find(s => s.id === report?.studentId);
+        if (report && student) {
+            if (window.confirm(`${student.name} 학생의 리포트를 학부모님께 발송하시겠습니까?`)) {
+                setMonthlyReports(prev => prev.map(r => 
+                    r.id === reportId ? { ...r, sentStatus: '발송완료', sentDate: new Date().toISOString().split('T')[0] } : r
+                ));
+                alert('리포트가 성공적으로 발송되었습니다.');
+            }
+        }
+    };
 
     const sortedReports = useMemo(() => {
         let sortableItems = [...monthlyReports];
@@ -105,9 +159,9 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
         { key: 'period', label: '기간' },
         { key: 'sentDate', label: '발송일' },
         { key: 'teacherId', label: '담당 교사' },
+        { key: 'sentStatus', label: '발송 상태' },
         { key: 'avgScore', label: '평균 점수' },
         { key: 'attendanceRate', label: '출석률' },
-        { key: 'homeworkRate', label: '과제 수행률' },
     ];
 
     return (
@@ -115,7 +169,7 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
             <div className="flex justify-between items-center mb-6">
                 <h1 className="text-3xl font-bold text-white">리포트 관리</h1>
                 <button 
-                    onClick={() => alert("신규 리포트 작성 기능은 준비 중입니다.")}
+                    onClick={handleAddNewReport}
                     className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors">
                     신규 리포트 작성
                 </button>
@@ -185,11 +239,19 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.period}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.sentDate}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(report.teacherId)}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                                <SentStatusBadge status={report.sentStatus} />
+                            </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.avgScore}점</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.attendanceRate}%</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.homeworkRate}%</td>
                             <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                <button className="text-yellow-400 hover:text-yellow-300">보기</button>
+                                <button
+                                    onClick={() => handleSendReport(report.id)}
+                                    className={`mr-4 ${report.sentStatus === '발송완료' ? 'text-green-400 hover:text-green-300' : 'text-blue-400 hover:text-blue-300'}`}
+                                >
+                                    {report.sentStatus === '발송완료' ? '재발송' : '발송'}
+                                </button>
+                                <button onClick={() => handleEditReport(report)} className="text-yellow-400 hover:text-yellow-300">수정</button>
                             </td>
                         </tr>
                     ))}
@@ -197,6 +259,15 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
                 </table>
                 </div>
             </Card>
+            <ReportModal
+                isOpen={isModalOpen}
+                onClose={handleCloseModal}
+                onSave={handleSaveReport}
+                report={editingReport}
+                students={students.filter(s => s.status === StudentStatus.ENROLLED)}
+                teachers={teachers}
+                lessonRecords={lessonRecords}
+            />
         </div>
     );
 };
