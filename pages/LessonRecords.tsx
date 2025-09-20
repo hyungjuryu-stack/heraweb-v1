@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
-import type { LessonRecord } from '../types';
+import type { LessonRecord, Student } from '../types';
 
 const AttendanceBadge: React.FC<{ status: LessonRecord['attendance'] }> = ({ status }) => {
     const colorMap = {
@@ -12,8 +11,13 @@ const AttendanceBadge: React.FC<{ status: LessonRecord['attendance'] }> = ({ sta
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorMap[status]}`}>{status}</span>;
 }
 
-const LessonRecords: React.FC = () => {
-    const { lessonRecords, setLessonRecords, students } = useMockData();
+interface LessonRecordsPageProps {
+    lessonRecords: LessonRecord[];
+    setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
+    students: Student[];
+}
+
+const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLessonRecords, students }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'date', direction: 'descending' });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
@@ -67,12 +71,6 @@ const LessonRecords: React.FC = () => {
     const getSortIndicator = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) return null;
         return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
-    };
-    
-    const handleDeleteRecord = (recordId: number) => {
-        if (window.confirm('이 수업 기록을 삭제하시겠습니까?')) {
-            setLessonRecords(prev => prev.filter(r => r.id !== recordId));
-        }
     };
     
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -192,9 +190,8 @@ const LessonRecords: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homeworkCompleted ? 'O' : 'X'}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.attitude}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-xs">{record.notes}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button className="text-yellow-400 hover:text-yellow-300">수정</button>
-                                <button onClick={() => handleDeleteRecord(record.id)} className="text-red-500 hover:text-red-400">삭제</button>
                             </td>
                         </tr>
                     ))}

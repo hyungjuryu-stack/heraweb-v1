@@ -1,11 +1,17 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useMockData } from '../hooks/useMockData';
 import Card from '../components/ui/Card';
-import type { Class } from '../types';
+import type { Class, Teacher, Student } from '../types';
 import ClassModal from '../components/ClassModal';
 
-const Classes: React.FC = () => {
-  const { classes, setClasses, teachers, students, setStudents } = useMockData();
+interface ClassesPageProps {
+  classes: Class[];
+  setClasses: React.Dispatch<React.SetStateAction<Class[]>>;
+  teachers: Teacher[];
+  students: Student[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+}
+
+const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, students, setStudents }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
@@ -27,7 +33,11 @@ const Classes: React.FC = () => {
         } else if (key === 'teacherId') {
             valA = teacherMap.get(a.teacherId) || '';
             valB = teacherMap.get(b.teacherId) || '';
-        } else {
+        } else if (key === 'grade') {
+            valA = a.grade.join(', ');
+            valB = b.grade.join(', ');
+        }
+        else {
             valA = a[key];
             valB = b[key];
         }
@@ -94,15 +104,6 @@ const Classes: React.FC = () => {
       setClasses([...classes, newClass]);
     }
     handleCloseModal();
-  };
-
-  const handleDeleteClass = (classId: number) => {
-    if (window.confirm('정말로 이 반을 삭제하시겠습니까? 해당 반에 속한 학생들은 "미배정" 상태가 됩니다.')) {
-        setStudents(prev => prev.map(s => 
-            s.currentClassId === classId ? { ...s, currentClassId: null, teacherId: null } : s
-        ));
-        setClasses(prev => prev.filter(c => c.id !== classId));
-    }
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,14 +221,13 @@ const Classes: React.FC = () => {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{classItem.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(classItem.teacherId)}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade.join(', ')}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{`${classItem.studentIds.length}명`}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.schedule}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.room}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.capacity}명</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => handleEditClass(classItem)} className="text-yellow-400 hover:text-yellow-300">상세</button>
-                      <button onClick={() => handleDeleteClass(classItem.id)} className="text-red-500 hover:text-red-400">삭제</button>
                   </td>
                 </tr>
               ))}

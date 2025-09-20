@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
 import type { AcademyEvent } from '../types';
 
 const EventTypeBadge: React.FC<{ type: AcademyEvent['type'] }> = ({ type }) => {
@@ -13,9 +12,12 @@ const EventTypeBadge: React.FC<{ type: AcademyEvent['type'] }> = ({ type }) => {
     return <span className={`px-2 py-1 text-xs font-semibold rounded-full ${colorMap[type]}`}>{type}</span>;
 }
 
+interface SchedulePageProps {
+    academyEvents: AcademyEvent[];
+    setAcademyEvents: React.Dispatch<React.SetStateAction<AcademyEvent[]>>;
+}
 
-const Schedule: React.FC = () => {
-  const { academyEvents, setAcademyEvents } = useMockData();
+const Schedule: React.FC<SchedulePageProps> = ({ academyEvents, setAcademyEvents }) => {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
 
@@ -26,12 +28,6 @@ const Schedule: React.FC = () => {
         return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
     });
   }, [academyEvents, sortOrder]);
-
-  const handleDeleteEvent = (eventId: number) => {
-    if (window.confirm('이 일정을 삭제하시겠습니까?')) {
-        setAcademyEvents(prev => prev.filter(e => e.id !== eventId));
-    }
-  };
 
   const handleSelectItem = (id: number) => {
       setSelectedIds(prev =>
@@ -114,12 +110,9 @@ const Schedule: React.FC = () => {
                         </div>
                         <div className="text-right flex-shrink-0">
                             <p className="font-semibold text-gray-200">{event.startDate} ~ {event.endDate}</p>
-                            <div className="space-x-4 mt-2">
+                            <div className="mt-2">
                                 <button className="text-xs text-yellow-400 hover:text-yellow-300">
                                     수정
-                                </button>
-                                <button onClick={() => handleDeleteEvent(event.id)} className="text-xs text-red-500 hover:text-red-400">
-                                삭제
                                 </button>
                             </div>
                         </div>

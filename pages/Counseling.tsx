@@ -1,10 +1,15 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
-import type { Counseling } from '../types';
+import type { Counseling, Student, Teacher } from '../types';
 
-const Counseling: React.FC = () => {
-    const { counselings, setCounselings, students, teachers } = useMockData();
+interface CounselingPageProps {
+    counselings: Counseling[];
+    setCounselings: React.Dispatch<React.SetStateAction<Counseling[]>>;
+    students: Student[];
+    teachers: Teacher[];
+}
+
+const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings, students, teachers }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'date', direction: 'descending' });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
@@ -64,12 +69,6 @@ const Counseling: React.FC = () => {
         return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
     };
 
-    const handleDeleteCounseling = (counselingId: number) => {
-        if (window.confirm('이 상담 기록을 삭제하시겠습니까?')) {
-            setCounselings(prev => prev.filter(c => c.id !== counselingId));
-        }
-    };
-    
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setSelectedIds(sortedCounselings.map(c => c.id));
@@ -185,9 +184,8 @@ const Counseling: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(item.teacherId)}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-md">{item.content}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-sm">{item.followUp}</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button className="text-yellow-400 hover:text-yellow-300">상세</button>
-                                <button onClick={() => handleDeleteCounseling(item.id)} className="text-red-500 hover:text-red-400">삭제</button>
                             </td>
                         </tr>
                     ))}

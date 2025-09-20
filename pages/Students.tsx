@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useMockData } from '../hooks/useMockData';
 import Card from '../components/ui/Card';
-import type { Student } from '../types';
+import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling } from '../types';
+import { StudentStatus } from '../types';
 import StudentModal from '../components/StudentModal';
 
 const StudentStatusBadge: React.FC<{ status: Student['status'] }> = ({ status }) => {
@@ -14,16 +14,27 @@ const StudentStatusBadge: React.FC<{ status: Student['status'] }> = ({ status })
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorMap[status]}`}>{status}</span>;
 }
 
-const Students: React.FC = () => {
-  const { 
-    students, setStudents, 
-    classes, setClasses, 
-    teachers, 
-    setLessonRecords, 
-    setMonthlyReports, 
-    setTuitions, 
-    setCounselings 
-  } = useMockData();
+interface StudentsPageProps {
+  students: Student[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+  classes: Class[];
+  setClasses: React.Dispatch<React.SetStateAction<Class[]>>;
+  teachers: Teacher[];
+  setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
+  setMonthlyReports: React.Dispatch<React.SetStateAction<MonthlyReport[]>>;
+  setTuitions: React.Dispatch<React.SetStateAction<Tuition[]>>;
+  setCounselings: React.Dispatch<React.SetStateAction<Counseling[]>>;
+}
+
+const Students: React.FC<StudentsPageProps> = ({
+  students, setStudents,
+  classes, setClasses,
+  teachers,
+  setLessonRecords,
+  setMonthlyReports,
+  setTuitions,
+  setCounselings
+}) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Student, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
@@ -89,18 +100,21 @@ const Students: React.FC = () => {
     setSelectedStudent(null);
   };
 
-  const handleSaveStudent = (studentData: Omit<Student, 'id' | 'attendanceId' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }) => {
+  const handleSaveStudent = (studentData: Omit<Student, 'id' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }) => {
     let updatedStudent: Student;
     const originalStudent = students.find(s => s.id === studentData.id);
 
     if (studentData.id && originalStudent) {
         updatedStudent = { ...originalStudent, ...studentData };
+        // 학생 상태가 '퇴원'으로 변경되면 출결번호를 삭제
+        if (updatedStudent.status === StudentStatus.WITHDRAWN && originalStudent.status !== StudentStatus.WITHDRAWN) {
+            updatedStudent.attendanceId = '';
+        }
         setStudents(students.map(s => s.id === studentData.id ? updatedStudent : s));
     } else {
         updatedStudent = {
             ...studentData,
             id: Date.now(),
-            attendanceId: String(Math.floor(1000 + Math.random() * 9000)),
             avgScore: 0,
             attendanceRate: 100,
             homeworkRate: 100,
@@ -125,20 +139,6 @@ const Students: React.FC = () => {
     }
 
     handleCloseModal();
-  };
-  
-  const handleDeleteStudent = (studentId: number) => {
-    if (window.confirm('정말로 이 학생을 삭제하시겠습니까? 학생과 관련된 모든 기록(수업, 리포트, 수강료 등)이 영구적으로 삭제됩니다.')) {
-      setStudents(prev => prev.filter(s => s.id !== studentId));
-      setClasses(prev => prev.map(c => ({
-        ...c,
-        studentIds: c.studentIds.filter(id => id !== studentId)
-      })));
-      setLessonRecords(prev => prev.filter(r => r.studentId !== studentId));
-      setMonthlyReports(prev => prev.filter(r => r.studentId !== studentId));
-      setTuitions(prev => prev.filter(t => t.studentId !== studentId));
-      setCounselings(prev => prev.filter(c => c.studentId !== studentId));
-    }
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -179,6 +179,7 @@ const Students: React.FC = () => {
   };
 
   const headers: { key: keyof Student; label: string }[] = [
+      { key: 'attendanceId', label: '출결번호' },
       { key: 'name', label: '이름' },
       { key: 'status', label: '상태' },
       { key: 'school', label: '학교' },
@@ -261,6 +262,7 @@ const Students: React.FC = () => {
                           <label htmlFor={`checkbox-${student.id}`} className="sr-only">checkbox</label>
                       </div>
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{student.attendanceId}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{student.name}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                     <StudentStatusBadge status={student.status} />
@@ -272,9 +274,8 @@ const Students: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{student.enrollmentDate}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{student.avgScore}점</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{student.attendanceRate}%</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <button onClick={() => handleEditStudent(student)} className="text-yellow-400 hover:text-yellow-300">상세</button>
-                      <button onClick={() => handleDeleteStudent(student.id)} className="text-red-500 hover:text-red-400">삭제</button>
                   </td>
                 </tr>
               ))}

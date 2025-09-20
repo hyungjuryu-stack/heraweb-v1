@@ -3,25 +3,25 @@ import { StudentStatus } from '../types';
 import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote } from '../types';
 
 const initialTeachers: Teacher[] = [
-  { id: 1, name: '이선생' },
-  { id: 2, name: '박선생' },
-  { id: 3, name: '김선생' },
+  { id: 1, name: '이선생', hireDate: '2022-03-01', phone: '010-1111-1111', email: 'lee@hera.math', resignationDate: '' },
+  { id: 2, name: '박선생', hireDate: '2023-05-01', phone: '010-2222-2222', email: 'park@hera.math', resignationDate: '' },
+  { id: 3, name: '김선생', hireDate: '2021-08-15', phone: '010-3333-3333', email: 'kim@hera.math', resignationDate: '' },
 ];
 
 const initialStudents: Student[] = [
-  { id: 1, attendanceId: '1023', name: '김민준', gender: '남', school: '헤라중학교', grade: '중2', enrollmentDate: '2023-03-05', status: StudentStatus.ENROLLED, currentClassId: 1, teacherId: 1, avgScore: 92, attendanceRate: 100, homeworkRate: 95, siblings: [], studentPhone: '010-1234-5678', parent1Phone: '010-1111-2222', sendSmsToBoth: false, tuitionPayer: '부' },
-  { id: 2, attendanceId: '1024', name: '이서연', gender: '여', school: '가온초등학교', grade: '초6', enrollmentDate: '2023-09-01', status: StudentStatus.ENROLLED, currentClassId: 2, teacherId: 2, avgScore: 98, attendanceRate: 98, homeworkRate: 100, siblings: [], studentPhone: '010-2345-6789', parent1Phone: '010-2222-3333', sendSmsToBoth: true, tuitionPayer: '모', parent2Phone: '010-2222-4444'},
-  { id: 3, attendanceId: '1025', name: '박도윤', gender: '남', school: '대한고등학교', grade: '고1', enrollmentDate: '2022-11-20', status: StudentStatus.ENROLLED, currentClassId: 3, teacherId: 3, avgScore: 88, attendanceRate: 95, homeworkRate: 90, siblings: [], studentPhone: '010-3456-7890', parent1Phone: '010-3333-4444', sendSmsToBoth: false, tuitionPayer: '부' },
-  { id: 4, attendanceId: '1026', name: '최지우', gender: '여', school: '헤라중학교', grade: '중1', enrollmentDate: '2024-01-15', status: StudentStatus.ENROLLED, currentClassId: 4, teacherId: 1, avgScore: 85, attendanceRate: 100, homeworkRate: 92, siblings: [], studentPhone: '010-4567-8901', parent1Phone: '010-4444-5555', sendSmsToBoth: false, tuitionPayer: '모' },
-  { id: 5, attendanceId: '1027', name: '정시우', gender: '남', school: '세종초등학교', grade: '초5', enrollmentDate: '2023-05-02', status: StudentStatus.CONSULTING, currentClassId: null, teacherId: null, avgScore: 0, attendanceRate: 0, homeworkRate: 0, siblings: [], studentPhone: '010-5678-9012', parent1Phone: '010-5555-6666', sendSmsToBoth: false, tuitionPayer: '모' },
-  { id: 6, attendanceId: '1028', name: '하윤서', gender: '여', school: '대한고등학교', grade: '고2', enrollmentDate: '2022-07-11', withdrawalDate: '2024-05-30', status: StudentStatus.WITHDRAWN, currentClassId: null, teacherId: 3, avgScore: 78, attendanceRate: 90, homeworkRate: 85, siblings: [], studentPhone: '010-6789-0123', parent1Phone: '010-6666-7777', sendSmsToBoth: false, tuitionPayer: '부' },
+  { id: 1, attendanceId: '1023', name: '김민준', gender: '남', school: '헤라중학교', grade: '중2', enrollmentDate: '2023-03-05', status: StudentStatus.ENROLLED, currentClassId: 1, teacherId: 1, avgScore: 92, attendanceRate: 100, homeworkRate: 95, siblings: [], studentPhone: '010-1234-5678', motherName: '김민준 모', motherPhone: '010-1111-2222', fatherName: '김철수', fatherPhone: '', sendSmsToBoth: false, tuitionPayer: '부', diagnosticTestScore: 85, diagnosticTestNotes: '기본기는 탄탄하나 심화 유형에 약함.' },
+  { id: 2, attendanceId: '1024', name: '이서연', gender: '여', school: '가온초등학교', grade: '초6', enrollmentDate: '2023-09-01', status: StudentStatus.ENROLLED, currentClassId: 2, teacherId: 2, avgScore: 98, attendanceRate: 98, homeworkRate: 100, siblings: [], studentPhone: '010-2345-6789', motherName: '이영희', motherPhone: '010-2222-3333', fatherName: '이진수', fatherPhone: '010-2222-4444', sendSmsToBoth: true, tuitionPayer: '모', diagnosticTestScore: 95, diagnosticTestNotes: '최상위권 학생으로, 경시대회 준비반 추천.'},
+  { id: 3, attendanceId: '1025', name: '박도윤', gender: '남', school: '대한고등학교', grade: '고1', enrollmentDate: '2022-11-20', status: StudentStatus.ENROLLED, currentClassId: 3, teacherId: 3, avgScore: 88, attendanceRate: 95, homeworkRate: 90, siblings: [], studentPhone: '010-3456-7890', motherName: '박도윤 모', motherPhone: '010-3333-4444', fatherName: '박현식', fatherPhone: '', sendSmsToBoth: false, tuitionPayer: '부', diagnosticTestScore: 78, diagnosticTestNotes: '도형 파트의 개념 이해가 부족하여 보충이 필요함.' },
+  { id: 4, attendanceId: '1026', name: '최지우', gender: '여', school: '헤라중학교', grade: '중1', enrollmentDate: '2024-01-15', status: StudentStatus.ENROLLED, currentClassId: 4, teacherId: 1, avgScore: 85, attendanceRate: 100, homeworkRate: 92, siblings: [], studentPhone: '010-4567-8901', motherName: '최경미', motherPhone: '010-4444-5555', fatherName: '', fatherPhone: '', sendSmsToBoth: false, tuitionPayer: '모', diagnosticTestScore: 90, diagnosticTestNotes: '연산 속도가 빠르고 정확함.' },
+  { id: 5, attendanceId: '1027', name: '정시우', gender: '남', school: '세종초등학교', grade: '초5', enrollmentDate: '2023-05-02', status: StudentStatus.CONSULTING, currentClassId: null, teacherId: null, avgScore: 0, attendanceRate: 0, homeworkRate: 0, siblings: [], studentPhone: '010-5678-9012', motherName: '정수진', motherPhone: '010-5555-6666', fatherName: '', fatherPhone: '', sendSmsToBoth: false, tuitionPayer: '모', diagnosticTestScore: null, diagnosticTestNotes: '진단테스트 미응시' },
+  { id: 6, attendanceId: '1028', name: '하윤서', gender: '여', school: '대한고등학교', grade: '고2', enrollmentDate: '2022-07-11', withdrawalDate: '2024-05-30', status: StudentStatus.WITHDRAWN, currentClassId: null, teacherId: 3, avgScore: 78, attendanceRate: 90, homeworkRate: 85, siblings: [], studentPhone: '010-6789-0123', motherName: '하윤서 모', motherPhone: '010-6666-7777', fatherName: '하재경', fatherPhone: '', sendSmsToBoth: false, tuitionPayer: '부', diagnosticTestScore: 72, diagnosticTestNotes: '내신 집중을 위해 퇴원.' },
 ];
 
 const initialClasses: Class[] = [
-  { id: 1, name: '중2 심화 A반', teacherId: 1, grade: '중2', studentIds: [1], schedule: '월/수/금 16:00-18:00', room: '301호', capacity: 10 },
-  { id: 2, name: '초6 영재반', teacherId: 2, grade: '초6', studentIds: [2], schedule: '화/목 15:00-17:00', room: '201호', capacity: 8 },
-  { id: 3, name: '고1 최상위 S반', teacherId: 3, grade: '고1', studentIds: [3], schedule: '월/수/금 19:00-22:00', room: '502호', capacity: 12 },
-  { id: 4, name: '중1 응용 B반', teacherId: 1, grade: '중1', studentIds: [4], schedule: '화/목 16:00-18:00', room: '302호', capacity: 10 },
+  { id: 1, name: '중2 심화 A반', teacherId: 1, grade: ['중2'], studentIds: [1], schedule: '월/수/금 16:00-18:00', room: '301호', capacity: 10 },
+  { id: 2, name: '초6 영재반', teacherId: 2, grade: ['초6'], studentIds: [2], schedule: '화/목 15:00-17:00', room: '201호', capacity: 8 },
+  { id: 3, name: '고1 최상위 S반', teacherId: 3, grade: ['고1'], studentIds: [3], schedule: '월/수/금 19:00-22:00', room: '502호', capacity: 12 },
+  { id: 4, name: '중1 응용 B반', teacherId: 1, grade: ['중1'], studentIds: [4], schedule: '화/목 16:00-18:00', room: '302호', capacity: 10 },
 ];
 
 const initialLessonRecords: LessonRecord[] = [

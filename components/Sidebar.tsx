@@ -1,6 +1,6 @@
 import React from 'react';
 import Logo from './Logo';
-import { DashboardIcon, StudentsIcon, TestGeneratorIcon, ReportsIcon, ClassesIcon, TuitionIcon, ScheduleIcon } from './Icons';
+import { DashboardIcon, StudentsIcon, TestGeneratorIcon, ReportsIcon, ClassesIcon, TeacherIcon, TuitionIcon, ScheduleIcon, ClassAttendanceIcon } from './Icons';
 import type { Page } from '../types';
 
 // Placeholder icons for new items
@@ -48,7 +48,9 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage }) => {
     { page: 'dashboard', label: '대시보드', icon: <DashboardIcon /> },
     { page: 'students', label: '학생 관리', icon: <StudentsIcon /> },
     { page: 'classes', label: '반/수업 관리', icon: <ClassesIcon /> },
+    { page: 'teachers', label: '강사 관리', icon: <TeacherIcon /> },
     { page: 'lesson-records', label: '수업 기록', icon: <LessonRecordIcon /> },
+    { page: 'class-attendance', label: '수업 출석부', icon: <ClassAttendanceIcon /> },
     { page: 'reports', label: '리포트 관리', icon: <ReportsIcon /> },
     { page: 'tuition', label: '수강료 관리', icon: <TuitionIcon /> },
     { page: 'counseling', label: '상담 기록', icon: <CounselingIcon /> },

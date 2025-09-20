@@ -1,12 +1,19 @@
 
 import React from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
 
-const Dashboard: React.FC = () => {
-    const { dashboardData } = useMockData();
+interface DashboardProps {
+    dashboardData: {
+        totalStudents: number;
+        consultingStudents: number;
+        attendanceToday: { name: string; value: number; fill: string; }[];
+        scoreTrends: { name: string; '평균 점수': number; }[];
+        schedule: { time: string; event: string; }[];
+    }
+}
 
+const Dashboard: React.FC<DashboardProps> = ({ dashboardData }) => {
     return (
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">헤라매쓰 대시보드</h1>

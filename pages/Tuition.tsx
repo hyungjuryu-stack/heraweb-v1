@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
-import type { Tuition } from '../types';
+import type { Tuition, Student } from '../types';
 
 const PaymentStatusBadge: React.FC<{ status: Tuition['paymentStatus'] }> = ({ status }) => {
     const colorMap = {
@@ -11,8 +10,13 @@ const PaymentStatusBadge: React.FC<{ status: Tuition['paymentStatus'] }> = ({ st
     return <span className={`px-2 py-1 text-xs font-medium rounded-full ${colorMap[status]}`}>{status}</span>;
 }
 
-const Tuition: React.FC = () => {
-    const { tuitions, setTuitions, students } = useMockData();
+interface TuitionPageProps {
+    tuitions: Tuition[];
+    setTuitions: React.Dispatch<React.SetStateAction<Tuition[]>>;
+    students: Student[];
+}
+
+const Tuition: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, students }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>(null);
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
@@ -64,12 +68,6 @@ const Tuition: React.FC = () => {
     const getSortIndicator = (key: string) => {
         if (!sortConfig || sortConfig.key !== key) return null;
         return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
-    };
-
-    const handleDeleteTuition = (tuitionId: number) => {
-        if (window.confirm('이 수강료 내역을 삭제하시겠습니까?')) {
-            setTuitions(prev => prev.filter(t => t.id !== tuitionId));
-        }
     };
     
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -189,9 +187,8 @@ const Tuition: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 font-semibold">{tuition.totalFee.toLocaleString()}원</td>
                              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{tuition.paymentMethod}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm"><PaymentStatusBadge status={tuition.paymentStatus} /></td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button className="text-yellow-400 hover:text-yellow-300">수정</button>
-                                <button onClick={() => handleDeleteTuition(tuition.id)} className="text-red-500 hover:text-red-400">삭제</button>
                             </td>
                         </tr>
                     ))}

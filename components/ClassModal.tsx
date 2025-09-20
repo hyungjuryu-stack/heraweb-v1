@@ -13,13 +13,15 @@ interface ClassModalProps {
 const defaultClassData = {
   name: '',
   teacherId: 0,
-  grade: '',
+  grade: [],
   schedule: '',
-  room: '',
+  room: '1호실',
   capacity: 10,
 };
 
 const daysOfWeek = ['월', '화', '수', '목', '금', '토', '일'];
+const gradeOptions = ['초1', '초2', '초3', '초4', '초5', '초6', '중1', '중2', '중3', '고1', '고2', '고3'];
+const roomOptions = ['1호실', '2호실', '3호실', '4호실', '5호실'];
 
 const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classData, teachers }) => {
   const [formData, setFormData] = useState<Omit<Class, 'id'|'studentIds'>>(defaultClassData);
@@ -71,6 +73,15 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
       prev.includes(day) ? prev.filter(d => d !== day) : [...prev, day]
     );
   };
+  
+  const handleGradeToggle = (grade: string) => {
+    setFormData(prev => {
+        const newGrades = prev.grade.includes(grade)
+            ? prev.grade.filter(g => g !== grade)
+            : [...prev.grade, grade];
+        return { ...prev, grade: newGrades };
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -93,10 +104,6 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
                 <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
               </div>
               <div>
-                <label htmlFor="grade" className="block text-sm font-medium text-gray-300 mb-1">대상 학년</label>
-                <input type="text" name="grade" id="grade" value={formData.grade} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
-              </div>
-              <div>
                 <label htmlFor="teacherId" className="block text-sm font-medium text-gray-300 mb-1">담당 교사</label>
                 <select name="teacherId" id="teacherId" value={formData.teacherId} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
                     <option value="" disabled>선생님 선택</option>
@@ -105,13 +112,34 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
                     ))}
                 </select>
               </div>
-               <div>
-                <label htmlFor="capacity" className="block text-sm font-medium text-gray-300 mb-1">최대 정원</label>
-                <input type="number" name="capacity" id="capacity" value={formData.capacity} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
+               <div className="md:col-span-2">
+                <label className="block text-sm font-medium text-gray-300 mb-2">대상 학년 (중복 선택 가능)</label>
+                <div className="flex flex-wrap gap-2">
+                    {gradeOptions.map(grade => (
+                        <button
+                            type="button"
+                            key={grade}
+                            onClick={() => handleGradeToggle(grade)}
+                            className={`px-3 py-1.5 text-sm font-medium rounded-full transition-colors ${
+                                formData.grade.includes(grade)
+                                ? 'bg-[#E5A823] text-gray-900'
+                                : 'bg-gray-700 hover:bg-gray-600 text-gray-200'
+                            }`}
+                        >
+                            {grade}
+                        </button>
+                    ))}
+                </div>
               </div>
               <div>
                 <label htmlFor="room" className="block text-sm font-medium text-gray-300 mb-1">강의실</label>
-                <input type="text" name="room" id="room" value={formData.room} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
+                <select name="room" id="room" value={formData.room} onChange={handleChange} className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
+                      {roomOptions.map(r => <option key={r} value={r}>{r}</option>)}
+                </select>
+              </div>
+               <div>
+                <label htmlFor="capacity" className="block text-sm font-medium text-gray-300 mb-1">최대 정원</label>
+                <input type="number" name="capacity" id="capacity" value={formData.capacity} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
               </div>
               <div className="md:col-span-2">
                 <label className="block text-sm font-medium text-gray-300 mb-2">수업 요일</label>

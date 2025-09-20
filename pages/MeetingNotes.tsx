@@ -1,10 +1,14 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
-import type { MeetingNote } from '../types';
+import type { MeetingNote, Teacher } from '../types';
 
-const MeetingNotes: React.FC = () => {
-    const { meetingNotes, setMeetingNotes, teachers } = useMockData();
+interface MeetingNotesPageProps {
+    meetingNotes: MeetingNote[];
+    setMeetingNotes: React.Dispatch<React.SetStateAction<MeetingNote[]>>;
+    teachers: Teacher[];
+}
+
+const MeetingNotes: React.FC<MeetingNotesPageProps> = ({ meetingNotes, setMeetingNotes, teachers }) => {
     const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
@@ -16,12 +20,6 @@ const MeetingNotes: React.FC = () => {
             return sortOrder === 'asc' ? dateA - dateB : dateB - dateA;
         });
     }, [meetingNotes, sortOrder]);
-
-    const handleDeleteNote = (noteId: number) => {
-        if (window.confirm('이 회의록을 삭제하시겠습니까?')) {
-            setMeetingNotes(prev => prev.filter(note => note.id !== noteId));
-        }
-    };
     
     const handleSelectItem = (id: number) => {
       setSelectedIds(prev =>
@@ -104,9 +102,8 @@ const MeetingNotes: React.FC = () => {
                                             {note.attendeeIds.map(id => teacherMap.get(id)).join(', ')}
                                         </p>
                                     </div>
-                                    <div className="flex gap-4 flex-shrink-0">
+                                    <div className="flex-shrink-0">
                                         <button className="text-yellow-400 hover:text-yellow-300">열람</button>
-                                        <button onClick={() => handleDeleteNote(note.id)} className="text-red-500 hover:text-red-400">삭제</button>
                                     </div>
                                 </div>
                                 <div className="mt-4 pt-4 border-t border-gray-700/50">

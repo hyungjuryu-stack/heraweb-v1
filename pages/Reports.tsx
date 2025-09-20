@@ -1,11 +1,16 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import { useMockData } from '../hooks/useMockData';
-import type { MonthlyReport } from '../types';
+import type { MonthlyReport, Student, Teacher } from '../types';
 import { generateStudentReview } from '../services/geminiService';
 
-const Reports: React.FC = () => {
-    const { monthlyReports, setMonthlyReports, students, teachers } = useMockData();
+interface ReportsPageProps {
+    monthlyReports: MonthlyReport[];
+    setMonthlyReports: React.Dispatch<React.SetStateAction<MonthlyReport[]>>;
+    students: Student[];
+    teachers: Teacher[];
+}
+
+const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports, students, teachers }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'sentDate', direction: 'descending' });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
@@ -66,12 +71,6 @@ const Reports: React.FC = () => {
         return sortConfig.direction === 'ascending' ? ' ▲' : ' ▼';
     };
 
-    const handleDeleteReport = (reportId: number) => {
-        if (window.confirm('이 리포트를 삭제하시겠습니까?')) {
-            setMonthlyReports(prev => prev.filter(r => r.id !== reportId));
-        }
-    };
-    
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
         if (e.target.checked) {
             setSelectedIds(sortedReports.map(r => r.id));
@@ -189,9 +188,8 @@ const Reports: React.FC = () => {
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.avgScore}점</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.attendanceRate}%</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{report.homeworkRate}%</td>
-                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium space-x-4">
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                                 <button className="text-yellow-400 hover:text-yellow-300">보기</button>
-                                <button onClick={() => handleDeleteReport(report.id)} className="text-red-500 hover:text-red-400">삭제</button>
                             </td>
                         </tr>
                     ))}

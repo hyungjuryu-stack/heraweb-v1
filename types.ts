@@ -1,9 +1,10 @@
-
 export type Page = 
   'dashboard' | 
   'students' | 
   'classes' | 
+  'teachers' |
   'lesson-records' | 
+  'class-attendance' |
   'reports' | 
   'tuition' | 
   'counseling' | 
@@ -30,12 +31,16 @@ export interface Student {
   status: StudentStatus;
   siblings: number[];
   studentPhone: string;
-  parent1Phone: string;
-  parent2Phone?: string;
+  motherName: string;
+  motherPhone: string;
+  fatherName?: string;
+  fatherPhone?: string;
   sendSmsToBoth: boolean;
   tuitionPayer: '모' | '부';
   currentClassId: number | null;
   teacherId: number | null;
+  diagnosticTestScore?: number | null;
+  diagnosticTestNotes?: string;
   // For display/mock purposes, in a real app these would be calculated
   avgScore: number;
   attendanceRate: number;
@@ -46,7 +51,7 @@ export interface Class {
   id: number;
   name: string;
   teacherId: number;
-  grade: string;
+  grade: string[];
   studentIds: number[];
   schedule: string;
   room: string;
@@ -56,6 +61,10 @@ export interface Class {
 export interface Teacher {
   id: number;
   name: string;
+  hireDate: string;
+  resignationDate?: string;
+  phone: string;
+  email: string;
 }
 
 export interface LessonRecord {
