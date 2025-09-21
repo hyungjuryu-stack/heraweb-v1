@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import type { MonthlyReport, Student, Teacher, LessonRecord, HomeworkGrade } from '../types';
 import Card from './ui/Card';
@@ -42,6 +41,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
         attendanceRate: 0,
         avgScore: 0,
         homeworkRate: 0,
+        attitudeRate: 0,
         counselingSummary: '',
         sentDate: new Date().toISOString().split('T')[0],
         teacherId: 0,
@@ -143,6 +143,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                     attendanceRate: 0,
                     avgScore: 0,
                     homeworkRate: 0,
+                    attitudeRate: 0,
                     counselingSummary: '',
                     sentDate: new Date().toISOString().split('T')[0],
                     teacherId: 0,
@@ -233,9 +234,14 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
             const scores = records.flatMap(r => [normalizeScore(r.testScore1), normalizeScore(r.testScore2), normalizeScore(r.testScore3)]).filter((s): s is number => s !== null);
             const avgScore = scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : 0;
             
-            setFormData(prev => ({ ...prev, attendanceRate, homeworkRate, avgScore }));
+            // Calculate attitude
+            const attitudeScoreMap: Record<LessonRecord['attitude'], number> = { '매우 좋음': 100, '보통': 85, '안좋음': 60 };
+            const totalAttitudeScore = records.reduce((sum, r) => sum + (attitudeScoreMap[r.attitude] || 85), 0);
+            const attitudeRate = Math.round(totalAttitudeScore / records.length);
+            
+            setFormData(prev => ({ ...prev, attendanceRate, homeworkRate, avgScore, attitudeRate }));
         } else {
-            setFormData(prev => ({ ...prev, attendanceRate: 0, homeworkRate: 0, avgScore: 0 }));
+            setFormData(prev => ({ ...prev, attendanceRate: 0, homeworkRate: 0, avgScore: 0, attitudeRate: 0 }));
         }
 
     }, [selectedStudent, periodConfig, periodType, lessonRecords]);
@@ -275,6 +281,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
 
     const chartData = useMemo(() => [
       { subject: '평균 점수', value: formData.avgScore, fullMark: 100 },
+      { subject: '수업 태도', value: formData.attitudeRate, fullMark: 100 },
       { subject: '출석률', value: formData.attendanceRate, fullMark: 100 },
       { subject: '과제 수행률', value: formData.homeworkRate, fullMark: 100 },
     ], [formData]);
@@ -362,10 +369,14 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                             
                             {selectedStudent && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6 p-4 bg-gray-800/50 rounded-lg items-center">
-                                    <div className="space-y-3">
+                                    <div className="grid grid-cols-2 gap-4">
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">평균 점수</p>
                                             <p className="text-2xl font-bold text-white">{formData.avgScore}점</p>
+                                        </div>
+                                        <div className="text-center md:text-left">
+                                            <p className="text-sm text-gray-400">수업 태도</p>
+                                            <p className="text-2xl font-bold text-white">{formData.attitudeRate}점</p>
                                         </div>
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">출석률</p>
@@ -378,11 +389,12 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                                     </div>
                                     <div className="h-48">
                                         <ResponsiveContainer width="100%" height="100%">
+                                            {/* Fix: Removed isAnimationActive from RadarChart as it's not a valid prop here. It is correctly on the Radar component. */}
                                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                                                 <PolarGrid gridType="circle" stroke="rgba(255, 255, 255, 0.2)" />
                                                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#d1d5db', fontSize: 12 }} />
                                                 <PolarRadiusAxis axisLine={false} tick={false} domain={[0, 100]} />
-                                                <Radar name={selectedStudent.name} dataKey="value" stroke="#E5A823" fill="#E5A823" fillOpacity={0.6} />
+                                                <Radar name={selectedStudent.name} dataKey="value" stroke="#E5A823" fill="#E5A823" fillOpacity={0.6} isAnimationActive={false} />
                                             </RadarChart>
                                         </ResponsiveContainer>
                                     </div>

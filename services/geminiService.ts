@@ -83,10 +83,10 @@ export const generateTest = async (grade: string, unit: string, numQuestions: nu
 };
 
 
-export const generateStudentReview = async (student: Student, studentRecords: LessonRecord[], teacherName: string | null): Promise<string> => {
+export const generateStudentReview = async (student: Student & { attitudeRate: number }, studentRecords: LessonRecord[], teacherName: string | null): Promise<string> => {
   try {
-    const recordsSummary = studentRecords.length > 0 // Get the last 5 records
-      ? `최근 수업 기록 요약:\n` + studentRecords.slice(-5).map(r => {
+    const recordsSummary = studentRecords.length > 0
+      ? `해당 기간의 전체 수업 기록:\n` + studentRecords.map(r => {
           const tests = [r.testScore1, r.testScore2, r.testScore3].filter(Boolean).join(', ');
           const textbooks = [r.main_textbook, r.supplementary_textbook, r.reinforcement_textbook].filter(Boolean).join(' / ');
           return `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework})`
@@ -95,7 +95,7 @@ export const generateStudentReview = async (student: Student, studentRecords: Le
             + (r.notes ? `, 노트: ${r.notes}` : '')
             + (r.requested_test ? `, 요청사항(${r.requested_test})` : '');
         }).join('\n')
-      : "최근 수업 기록이 없습니다.";
+      : "해당 기간의 수업 기록이 없습니다.";
 
     const prompt = `
       다음 학생 데이터를 바탕으로 학부모님께 보낼 월간 리포트 종합 리뷰를 작성해줘. 실제 선생님이 작성하는 것처럼, 전문적이면서도 따뜻하고 안정감 있는 톤을 사용해줘.
@@ -105,23 +105,25 @@ export const generateStudentReview = async (student: Student, studentRecords: Le
       - 학년: ${student.grade}
       - 담당 교사: ${teacherName ?? '미배정'}
 
-      **분석할 정량 데이터:**
+      **분석할 정량 데이터 (기간 전체 요약):**
       - 평균 점수: ${student.avgScore}점
       - 출석률: ${student.attendanceRate}%
       - 과제 제출률: ${student.homeworkRate}%
+      - 수업 태도 점수: ${student.attitudeRate}점
 
-      **참고 자료:**
+      **참고 자료 (기간 내 상세 기록):**
       - 진단 테스트 총평: ${student.diagnosticTestNotes || '없음'}
       - ${recordsSummary}
 
       **작성 지침:**
       1.  **학습 태도 및 성취도 분석 (2-3문장):**
-          - 정량 데이터를 바탕으로 학생의 학습 상태를 구체적으로 분석해줘. 예를 들어, "출석률이 100%로 매우 성실한 태도를 보여주고 있으며, 과제 수행률 또한 높아 학습 습관이 잘 형성되어 있습니다." 와 같이 구체적인 수치를 언급하며 칭찬해줘.
-          - 평균 점수의 변화나 특정 테스트 결과가 있다면 긍정적으로 언급해줘.
+          - 정량 데이터(평균 점수, 출석률, 과제 수행률, 수업 태도 점수)와 **기간 내 수업 기록의 변화 추이**를 종합적으로 분석해줘.
+          - 예를 들어, "리포트 기간 초반에는 과제 수행에 어려움을 보였으나, 후반부로 갈수록 꾸준히 개선되어 'A' 등급을 받는 횟수가 늘어났습니다." 또는 "꾸준히 성실한 태도를 보여주었으며, 특히 월말에 치른 테스트에서 점수가 크게 향상되었습니다." 와 같이 **시간에 따른 변화**를 구체적으로 언급해줘.
+          - 출석, 태도, 과제 성실도 등 학습 태도의 변화를 긍정적으로 짚어주고, 평균 점수의 상승/하락 추세도 자연스럽게 설명해줘.
 
       2.  **강점 및 보완점 (2-3문장):**
-          - 수업 기록(교재 진도, 테스트 결과 등), 테스트 결과 등을 종합하여 학생의 강점(예: 특정 단원 이해도, 문제 해결 능력)과 보완이 필요한 점을 부드럽게 설명해줘.
-          - "특히, 함수 단원에서 높은 이해도를 보이며 응용 문제 해결 능력이 뛰어납니다. 다만, 서술형 문제에서 풀이 과정을 생략하는 경향이 있어 이 부분을 보완하면 더욱 좋은 결과를 얻을 수 있을 것입니다." 와 같이 구체적인 예시를 들어줘.
+          - **전체 수업 기록**(교재 진도, 개별 테스트 결과, 선생님 노트 등)을 바탕으로 학생의 강점(예: 특정 단원 이해도, 문제 해결 능력)과 보완점을 분석해줘.
+          - 일관적으로 보이는 강점이나 약점을 언급해줘. 예: "특히, '함수' 단원에서 높은 이해도를 보이며 응용 문제 해결 능력이 뛰어납니다. 다만, 서술형 문제에서 풀이 과정을 생략하는 경향이 있어 이 부분을 보완하면 더욱 좋은 결과를 얻을 수 있을 것입니다."
 
       3.  **향후 학원 지도 계획 (1-2문장):**
           - 분석 내용을 바탕으로 학원에서 어떻게 학생을 지도할 것인지 구체적인 계획을 제시해줘.

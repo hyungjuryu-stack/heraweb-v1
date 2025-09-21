@@ -1,4 +1,3 @@
-
 import { useState } from 'react';
 import { StudentStatus } from '../types';
 import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote, Position, HomeworkGrade } from '../types';
@@ -307,7 +306,7 @@ const createInitialData = () => {
     const reportPeriod = `${lastMonth.getFullYear()}년 ${lastMonth.getMonth() + 1}월`;
 
     students.filter(s => s.status === StudentStatus.ENROLLED && s.teacherId).forEach(student => {
-        monthlyReports.push({ id: reportId++, studentId: student.id, period: reportPeriod, attendanceRate: student.attendanceRate, avgScore: student.avgScore, homeworkRate: student.homeworkRate, counselingSummary: '특별한 상담 내역 없음.', sentDate: endOfLastMonth.toISOString().split('T')[0], teacherId: student.teacherId as number, reviewText: `${student.name} 학생은 지난 한 달간 꾸준한 학습 태도를 보여주었습니다. 특히 ${getRandom(['연산', '도형', '함수'])} 파트에서 강점을 보이고 있으며, 오답 노트 정리를 통해 약점을 보완해나가고 있습니다.`, sentStatus: Math.random() > 0.3 ? '발송완료' : '미발송' });
+        monthlyReports.push({ id: reportId++, studentId: student.id, period: reportPeriod, attendanceRate: student.attendanceRate, avgScore: student.avgScore, homeworkRate: student.homeworkRate, attitudeRate: getRandomInt(85, 100), counselingSummary: '특별한 상담 내역 없음.', sentDate: endOfLastMonth.toISOString().split('T')[0], teacherId: student.teacherId as number, reviewText: `${student.name} 학생은 지난 한 달간 꾸준한 학습 태도를 보여주었습니다. 특히 ${getRandom(['연산', '도형', '함수'])} 파트에서 강점을 보이고 있으며, 오답 노트 정리를 통해 약점을 보완해나가고 있습니다.`, sentStatus: Math.random() > 0.3 ? '발송완료' : '미발송' });
     });
 
     // 7. 상담 기록 생성

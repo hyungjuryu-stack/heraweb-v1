@@ -1,8 +1,7 @@
-
 import React, { useState, useEffect } from 'react';
 import Card from './ui/Card';
 import type { MonthlyReport, Student } from '../types';
-import { KakaoTalkIcon, PdfIcon } from './Icons';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 
 interface ReportPreviewModalProps {
   isOpen: boolean;
@@ -15,7 +14,7 @@ interface ReportPreviewModalProps {
 
 type SendStep = 'initial' | 'sending_kakao' | 'failed_kakao' | 'sending_sms' | 'success';
 
-const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose, onConfirmSend, report, student, teacherName }) => {
+const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose, onConfirmSend, report, student }) => {
   const [sendStep, setSendStep] = useState<SendStep>('initial');
 
   useEffect(() => {
@@ -25,6 +24,13 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
   }, [isOpen]);
 
   if (!isOpen || !report || !student) return null;
+  
+  const chartData = [
+      { subject: '평균 점수', value: report.avgScore, fullMark: 100 },
+      { subject: '태도', value: report.attitudeRate, fullMark: 100 },
+      { subject: '출석', value: report.attendanceRate, fullMark: 100 },
+      { subject: '과제', value: report.homeworkRate, fullMark: 100 },
+  ];
 
   const handleInitialSend = () => {
     setSendStep('sending_kakao');
@@ -56,8 +62,6 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
   const receiverPhone = student.sendSmsToBoth && student.fatherPhone 
     ? `${student.motherPhone}(모), ${student.fatherPhone}(부)`
     : student.motherPhone;
-    
-  const pdfFilename = `${student.name}_${report.period.replace(/ /g, '_')}_리포트.pdf`;
 
   const renderButtons = () => {
     switch(sendStep) {
@@ -89,31 +93,39 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
   return (
     <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={sendStep === 'initial' ? onClose : undefined} role="dialog" aria-modal="true">
       <div className="w-full max-w-lg" onClick={e => e.stopPropagation()}>
-        <Card title="카카오톡 발송 미리보기">
+        <Card title="리포트 발송 미리보기">
           <div className="space-y-4">
             <div className="bg-gray-800/50 p-3 rounded-lg text-sm">
                 <p className="text-gray-400">받는 사람:</p>
                 <p className="text-white font-semibold">{student.motherName} 학부모님 ({receiverPhone})</p>
             </div>
             
-            <div className="bg-[#FEE500] p-4 rounded-xl text-black">
-                <div className="flex items-start mb-3">
-                    <KakaoTalkIcon className="w-8 h-8 mr-2 flex-shrink-0" />
-                    <h4 className="font-bold text-sm leading-tight">
-                        헤라매쓰
-                    </h4>
+            <div className="p-4 border border-gray-700/50 rounded-lg bg-gray-900/30">
+                <h3 className="text-xl font-bold text-center text-white">{student.name} 학생</h3>
+                <p className="text-sm text-center text-gray-400 mb-4">{report.period} 학습 리포트</p>
+                
+                <div className="h-48">
+                    <ResponsiveContainer width="100%" height="100%">
+                        {/* Fix: Removed isAnimationActive from RadarChart as it's not a valid prop here. It is correctly on the Radar component. */}
+                        <RadarChart cx="50%" cy="50%" outerRadius="70%" data={chartData}>
+                            <PolarGrid stroke="rgba(255, 255, 255, 0.2)" />
+                            <PolarAngleAxis dataKey="subject" tick={{ fill: '#d1d5db', fontSize: 12 }} />
+                            <Radar name={student.name} dataKey="value" stroke="#E5A823" fill="#E5A823" fillOpacity={0.6} isAnimationActive={false} />
+                        </RadarChart>
+                    </ResponsiveContainer>
                 </div>
-                <div className="bg-white p-3 rounded space-y-2 text-sm">
-                    <p>{`[${student.name}] 학생의 ${report.period} 리포트입니다.`}</p>
-                    <div className="flex items-center gap-3 p-3 bg-gray-100 rounded-lg border border-gray-200 cursor-pointer hover:bg-gray-200 transition-colors">
-                        <PdfIcon className="w-10 h-10 text-red-500 flex-shrink-0" />
-                        <div className="flex-grow min-w-0">
-                            <p className="font-semibold truncate text-gray-800">{pdfFilename}</p>
-                            <p className="text-xs text-gray-500">문서 ∙ PDF</p>
-                        </div>
-                    </div>
+
+                <div className="mt-4 p-3 bg-gray-800/50 rounded-md">
+                    <p className="text-sm font-semibold text-gray-200 mb-2">선생님 종합 리뷰 (요약)</p>
+                    <p className="text-sm text-gray-300 max-h-24 overflow-y-auto whitespace-pre-wrap p-1">
+                        {report.reviewText}
+                    </p>
                 </div>
+                <p className="text-xs text-gray-500 mt-2 text-center">
+                    전체 내용은 PDF 파일로 전송됩니다.
+                </p>
             </div>
+
 
             {sendStep === 'failed_kakao' && (
                 <div className="p-3 text-center bg-red-900/50 border border-red-500/30 rounded-lg">

@@ -84,6 +84,7 @@ export interface MonthlyReport {
   attendanceRate: number;
   avgScore: number;
   homeworkRate: number;
+  attitudeRate: number;
   counselingSummary: string;
   sentDate: string;
   teacherId: number;

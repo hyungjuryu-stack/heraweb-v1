@@ -1,10 +1,12 @@
+
+
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Class, Student, Teacher, LessonRecord, HomeworkGrade, User } from '../types';
 import { KakaoTalkIcon } from '../components/Icons';
 
 // --- Type Definitions ---
 type DailyRecordData = Omit<LessonRecord, 'id' | 'date' | 'studentId'>;
-type NotificationStatus = 'idle' | 'sending' | 'resending' | 'sent' | 'failed';
+type NotificationStatus = 'idle' | 'sending' | 'sent' | 'failed';
 const homeworkGrades: HomeworkGrade[] = ['A', 'B', 'C', 'D', 'F'];
 
 // --- Helper Components ---
@@ -257,6 +259,9 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
   const [notificationPreviewDate, setNotificationPreviewDate] = useState<Date | null>(null);
 
   const canEdit = user.role === 'admin' || user.role === 'operator';
+  
+  const simToday = new Date(2025, 8, 15);
+  simToday.setHours(0, 0, 0, 0);
 
   useEffect(() => {
     // If classes are loaded and no class is selected, select the first one.
@@ -314,9 +319,6 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
   useEffect(() => {
     if (!selectedClassId) return;
 
-    const simToday = new Date(2025, 8, 15);
-    simToday.setHours(0, 0, 0, 0); // Normalize to start of day
-
     const notificationsToUpdate: Record<string, NotificationStatus> = {};
     
     classDaysInMonth.forEach(date => {
@@ -335,7 +337,7 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
     if (Object.keys(notificationsToUpdate).length > 0) {
         setSentNotifications(prev => ({ ...prev, ...notificationsToUpdate }));
     }
-  }, [classDaysInMonth, selectedClassId]);
+  }, [classDaysInMonth, selectedClassId, simToday]);
   
   const notificationTriggers = useMemo(() => {
       const triggers: Record<string, boolean> = {};
@@ -383,19 +385,6 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
         setSentNotifications(prev => ({ ...prev, [key]: isSuccess ? 'sent' : 'failed' }));
     }, 1000);
   };
-
-  const handleResend = (date: Date) => {
-    if (!selectedClassId) return;
-    const key = `${date.toISOString().split('T')[0]}-${selectedClassId}`;
-    
-    setSentNotifications(prev => ({ ...prev, [key]: 'resending' }));
-    
-    setTimeout(() => {
-        // Resend always succeeds
-        setSentNotifications(prev => ({ ...prev, [key]: 'sent' }));
-    }, 1000);
-  };
-
 
   const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -476,38 +465,35 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
                         const key = `${dateString}-${selectedClassId}`;
                         const status = sentNotifications[key] || 'idle';
                         const needsNotification = notificationTriggers[dateString];
+                        const classDate = new Date(date);
+                        classDate.setHours(0, 0, 0, 0);
+                        const isFutureDate = classDate > simToday;
 
                         let content;
-
-                        if (status === 'sending' || status === 'resending') {
+                        
+                        if (isFutureDate) {
+                             content = (
+                                <button disabled className="w-full text-xs px-2 py-1.5 rounded bg-gray-700 text-gray-500 cursor-not-allowed">
+                                    발송 불가
+                                </button>
+                            );
+                        } else if (status === 'sending') {
                             content = (
                                 <button disabled className="w-full text-xs px-2 py-1.5 rounded bg-gray-700 text-gray-400 cursor-not-allowed flex items-center justify-center">
                                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                         <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                         <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                     </svg>
-                                    {status === 'resending' ? '재발송 중...' : '전송 중...'}
+                                    전송 중...
                                 </button>
                             );
                         } else if (status === 'sent') {
                             content = (
-                                <div className="flex flex-col items-center gap-1">
-                                    <span className="font-semibold text-green-400">발송완료</span>
-                                    <div className="flex w-full gap-1">
-                                        <button onClick={() => setNotificationPreviewDate(date)} className="flex-1 text-xs px-2 py-1 rounded bg-blue-600 hover:bg-blue-500 text-white">
-                                            내용
-                                        </button>
-                                        <button 
-                                            onClick={() => {
-                                                if (window.confirm('이미 발송된 알림입니다. 다시 보내시겠습니까?')) {
-                                                    handleResend(date);
-                                                }
-                                            }}
-                                            className="flex-1 text-xs px-2 py-1 rounded bg-gray-600 hover:bg-gray-500 text-white"
-                                        >
-                                            재발송
-                                        </button>
-                                    </div>
+                                <div className="flex flex-col items-center justify-center gap-1 h-full">
+                                    <span className="font-semibold text-green-400 mb-1">발송완료</span>
+                                    <button onClick={() => setNotificationPreviewDate(date)} className="w-full text-xs px-2 py-1.5 rounded bg-blue-600 hover:bg-blue-500 text-white">
+                                        발송 내용 확인
+                                    </button>
                                 </div>
                             );
                         } else if (status === 'failed') {

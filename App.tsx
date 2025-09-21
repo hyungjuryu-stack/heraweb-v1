@@ -74,7 +74,13 @@ const App: React.FC = () => {
             case 'teachers':
                 return <Teachers teachers={data.teachers} setTeachers={data.setTeachers} setStudents={data.setStudents} setClasses={data.setClasses} />;
             case 'lesson-records':
-                return <LessonRecords lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} students={data.students} />;
+                return <LessonRecords 
+                    lessonRecords={data.lessonRecords} 
+                    setLessonRecords={data.setLessonRecords} 
+                    students={data.students} 
+                    classes={data.classes} 
+                    teachers={data.teachers} 
+                />;
             case 'class-attendance':
                 // Pass the user object to enable role-based permissions for editing attendance records.
                 return <ClassAttendance user={auth.user} classes={data.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
