@@ -1,5 +1,5 @@
 import { GoogleGenAI, Type } from "@google/genai";
-import type { Student, GeneratedTest, LessonRecord } from '../types';
+import type { Student, GeneratedTest, LessonRecord, MonthlyReport, TrendAnalysis } from '../types';
 
 if (!process.env.API_KEY) {
   // This is a placeholder for environments where the key is not set.
@@ -47,6 +47,30 @@ const testGenerationSchema = {
         }
     },
     required: ["title", "questions"]
+};
+
+const trendAnalysisSchema = {
+    type: Type.OBJECT,
+    properties: {
+        overallTrend: { 
+            type: Type.STRING, 
+            description: '학생의 여러 리포트에 걸친 전반적인 학습 추세를 한두 문장으로 요약합니다. (예: "꾸준한 상승세를 보였으나 최근 주춤하는 경향이 있습니다.")' 
+        },
+        keyStrengths: { 
+            type: Type.STRING, 
+            description: '분석 기간 동안 꾸준히 강점으로 나타난 부분에 대해 구체적인 데이터(예: 과목, 점수대)를 근거로 서술합니다.' 
+        },
+        areasForGrowth: { 
+            type: Type.STRING, 
+            description: '점수가 하락했거나, 다른 지표에 비해 꾸준히 낮은 성취도를 보이는 약점 및 개선이 필요한 부분을 구체적인 데이터를 근거로 서술합니다.' 
+        },
+        recommendations: {
+            type: Type.ARRAY,
+            items: { type: Type.STRING },
+            description: '분석된 강점과 약점을 바탕으로, 학생에게 도움이 될 만한 2-3가지의 구체적이고 실행 가능한 맞춤 학습 전략 또는 지도 방안을 제안합니다.'
+        }
+    },
+    required: ["overallTrend", "keyStrengths", "areasForGrowth", "recommendations"]
 };
 
 
@@ -151,4 +175,52 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
     console.error("Error generating student review:", error);
     throw new Error("리뷰 생성에 실패했습니다.");
   }
+};
+
+export const generateTrendAnalysis = async (student: Student, reports: MonthlyReport[]): Promise<TrendAnalysis> => {
+    try {
+        const reportSummary = reports
+            .sort((a, b) => a.period.localeCompare(b.period)) // Sort reports chronologically
+            .map(r => 
+                `- ${r.period}: 평균 점수(${r.avgScore}점), 출석률(${r.attendanceRate}%), 과제 수행률(${r.homeworkRate}%), 수업 태도(${r.attitudeRate}점)`
+            ).join('\n');
+
+        const prompt = `
+            **당신은 데이터 기반 교육 컨설턴트입니다.** 여러 기간에 걸친 학생의 학습 데이터를 분석하여, 장기적인 학습 추세와 맞춤형 성장 전략을 제시하는 심층 분석 리포트를 작성해주세요.
+            긍정적이고 건설적인 어조를 사용하되, 데이터에 기반한 객관적인 분석을 제공해야 합니다.
+
+            **학생 기본 정보:**
+            - 학생 이름: ${student.name}
+            - 학년: ${student.grade}
+
+            **분석할 장기 학습 데이터:**
+            ${reportSummary}
+
+            **분석 지침:**
+            1.  **전체 추세 분석:** 제공된 모든 리포트 데이터를 종합하여 학생의 성취도가 상승세, 하락세, 또는 정체 상태인지 명확하게 요약해주세요. 변화의 변곡점이 있다면 그 시점을 언급해주세요.
+            2.  **강점 및 약점 도출:** 일시적인 결과가 아닌, 여러 기간에 걸쳐 반복적으로 나타나는 강점과 약점을 찾아주세요. 예를 들어, '과제 수행률은 꾸준히 높지만, 평균 점수의 변동성이 크다' 와 같이 분석해주세요.
+            3.  **맞춤형 추천 제공:** 분석 결과를 바탕으로, 학생의 강점을 강화하고 약점을 보완할 수 있는 구체적이고 실천 가능한 학습 전략을 2~3가지 제안해주세요. 추상적인 조언이 아닌, '특정 단원 오답 노트 강화', '주 1회 심화 문제 풀이 시간 확보' 등 명확한 액션 플랜을 제시해야 합니다.
+
+            **출력 형식:**
+            - 반드시 제공된 JSON 스키마 형식에 맞춰 응답을 생성해주세요.
+        `;
+
+        const response = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: {
+                responseMimeType: "application/json",
+                responseSchema: trendAnalysisSchema,
+                temperature: 0.5,
+            },
+        });
+
+        const jsonString = response.text.trim();
+        const generatedContent = JSON.parse(jsonString);
+        return generatedContent as TrendAnalysis;
+
+    } catch (error) {
+        console.error("Error generating trend analysis:", error);
+        throw new Error("학습 트렌드 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
+    }
 };

@@ -146,6 +146,13 @@ export interface GeneratedTest {
   }[];
 }
 
+export interface TrendAnalysis {
+  overallTrend: string;
+  keyStrengths: string;
+  areasForGrowth: string;
+  recommendations: string[];
+}
+
 export type Page = 
   | 'dashboard'
   | 'students'

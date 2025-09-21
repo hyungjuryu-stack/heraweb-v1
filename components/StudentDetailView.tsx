@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import Card from './ui/Card';
 import type { Student, MonthlyReport, Tuition, Counseling } from '../types';
-import { ReportsIcon, TuitionIcon, CounselingIcon } from './Icons';
+import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon } from './Icons';
+import TrendAnalysisModal from './TrendAnalysisModal';
 
 interface StudentDetailViewProps {
   student: Student;
@@ -92,15 +93,23 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   counselings,
   teacherMap,
 }) => {
-  const [activeDetailTab, setActiveDetailTab] = useState<'reports' | 'tuition' | 'counseling'>('reports');
+  type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis';
+  const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
+  const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
 
-  const TabButton = ({ icon, label, tab }: { icon: React.ReactNode; label: string; tab: 'reports' | 'tuition' | 'counseling' }) => {
+  const TabButton = ({ icon, label, tab }: { icon: React.ReactNode; label: string; tab: DetailTab }) => {
     const isActive = activeDetailTab === tab;
     return (
         <button
-            onClick={() => setActiveDetailTab(tab)}
+            onClick={() => {
+                if (tab === 'analysis') {
+                    setIsAnalysisModalOpen(true);
+                } else {
+                    setActiveDetailTab(tab);
+                }
+            }}
             className={`flex items-center px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-                isActive
+                isActive && tab !== 'analysis'
                 ? 'border-[#E5A823] text-[#E5A823]'
                 : 'border-transparent text-gray-400 hover:text-white'
             }`}
@@ -112,41 +121,51 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   };
 
   return (
-    <Card>
-      <div className="flex justify-between items-start mb-4">
-        <div>
-          <h3 className="text-xl font-bold text-white">{student.name}</h3>
-          <p className="text-sm text-gray-400">{student.grade} / {student.school}</p>
+    <>
+      <Card>
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h3 className="text-xl font-bold text-white">{student.name}</h3>
+            <p className="text-sm text-gray-400">{student.grade} / {student.school}</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => onEdit(student)}
+              className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded-md transition-colors"
+            >
+              수정
+            </button>
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-white"
+              aria-label="Close details"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => onEdit(student)}
-            className="text-sm bg-gray-600 hover:bg-gray-500 text-white font-medium py-1 px-3 rounded-md transition-colors"
-          >
-            수정
-          </button>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-white"
-            aria-label="Close details"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" /></svg>
-          </button>
+
+        <div className="flex border-b border-gray-700 mb-4">
+          <TabButton icon={<ReportsIcon className="w-5 h-5 mr-2" />} label="리포트" tab="reports" />
+          <TabButton icon={<TuitionIcon className="w-5 h-5 mr-2" />} label="수강료" tab="tuition" />
+          <TabButton icon={<CounselingIcon className="w-5 h-5 mr-2"/>} label="상담" tab="counseling" />
+          <TabButton icon={<AnalysisIcon className="w-5 h-5 mr-2"/>} label="AI 분석" tab="analysis" />
         </div>
-      </div>
 
-      <div className="flex border-b border-gray-700 mb-4">
-        <TabButton icon={<ReportsIcon className="w-5 h-5 mr-2" />} label="리포트" tab="reports" />
-        <TabButton icon={<TuitionIcon className="w-5 h-5 mr-2" />} label="수강료" tab="tuition" />
-        <TabButton icon={<CounselingIcon className="w-5 h-5 mr-2"/>} label="상담" tab="counseling" />
-      </div>
+        <div className="max-h-[55vh] overflow-y-auto pr-2">
+          {activeDetailTab === 'reports' && <ReportList studentId={student.id} monthlyReports={monthlyReports} />}
+          {activeDetailTab === 'tuition' && <TuitionList studentId={student.id} tuitions={tuitions} />}
+          {activeDetailTab === 'counseling' && <CounselingList studentId={student.id} counselings={counselings} teacherMap={teacherMap} />}
+        </div>
+      </Card>
 
-      <div className="max-h-[55vh] overflow-y-auto pr-2">
-        {activeDetailTab === 'reports' && <ReportList studentId={student.id} monthlyReports={monthlyReports} />}
-        {activeDetailTab === 'tuition' && <TuitionList studentId={student.id} tuitions={tuitions} />}
-        {activeDetailTab === 'counseling' && <CounselingList studentId={student.id} counselings={counselings} teacherMap={teacherMap} />}
-      </div>
-    </Card>
+      <TrendAnalysisModal
+        isOpen={isAnalysisModalOpen}
+        onClose={() => setIsAnalysisModalOpen(false)}
+        student={student}
+        reports={monthlyReports}
+      />
+    </>
   );
 };
 
