@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -7,6 +8,7 @@ import TestGenerator from './pages/TestGenerator';
 import Reports from './pages/Reports';
 import Classes from './pages/Classes';
 import Schedule from './pages/Schedule';
+import DailySchedule from './pages/DailySchedule';
 import LessonRecords from './pages/LessonRecords';
 import Tuition from './pages/Tuition';
 import Counseling from './pages/Counseling';
@@ -92,6 +94,8 @@ const App: React.FC = () => {
                 return <Counseling counselings={data.counselings} setCounselings={data.setCounselings} students={data.students} teachers={data.teachers} />;
             case 'schedule':
                 return <Schedule academyEvents={data.academyEvents} setAcademyEvents={data.setAcademyEvents} />;
+            case 'daily-schedule':
+                return <DailySchedule classes={data.classes} students={data.students} teachers={data.teachers} />;
             case 'meeting-notes':
                 return <MeetingNotes meetingNotes={data.meetingNotes} setMeetingNotes={data.setMeetingNotes} teachers={data.teachers} />;
             case 'test-generator':

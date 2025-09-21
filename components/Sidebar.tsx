@@ -13,6 +13,7 @@ import {
     LessonRecordIcon,
     CounselingIcon,
     MeetingNotesIcon,
+    ClockIcon,
     LogoutIcon,
     SettingsIcon
 } from './Icons';
@@ -51,14 +52,15 @@ const NavItem: React.FC<{
 const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, user, onLogout }) => {
   const menuItems = [
     { page: 'dashboard', label: '대시보드', icon: <DashboardIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
+    { page: 'daily-schedule', label: '오늘의 수업일정', icon: <ClockIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
+    { page: 'class-attendance', label: '수업 출석부', icon: <ClassAttendanceIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
+    { page: 'reports', label: '리포트 관리', icon: <ReportsIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
+    { page: 'counseling', label: '상담 기록', icon: <CounselingIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'students', label: '학생 관리', icon: <StudentsIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'classes', label: '반/수업 관리', icon: <ClassesIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'teachers', label: '강사 관리', icon: <TeacherIcon />, allowedRoles: ['admin', 'operator'] },
     { page: 'lesson-records', label: '수업 기록', icon: <LessonRecordIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
-    { page: 'class-attendance', label: '수업 출석부', icon: <ClassAttendanceIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
-    { page: 'reports', label: '리포트 관리', icon: <ReportsIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'tuition', label: '수강료 관리', icon: <TuitionIcon />, allowedRoles: ['admin', 'operator'] },
-    { page: 'counseling', label: '상담 기록', icon: <CounselingIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'schedule', label: '연간 일정', icon: <ScheduleIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'meeting-notes', label: '회의록', icon: <MeetingNotesIcon />, allowedRoles: ['admin', 'operator'] },
     { page: 'test-generator', label: '시험지 생성기', icon: <TestGeneratorIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },

@@ -164,6 +164,7 @@ export type Page =
   | 'tuition'
   | 'counseling'
   | 'schedule'
+  | 'daily-schedule'
   | 'meeting-notes'
   | 'test-generator'
   | 'mypage';
