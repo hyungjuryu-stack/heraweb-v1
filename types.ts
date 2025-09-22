@@ -186,6 +186,7 @@ export type Page =
   | 'daily-schedule'
   | 'meeting-notes'
   | 'test-generator'
+  | 'user-manual'
   | 'mypage';
 
 export interface User {

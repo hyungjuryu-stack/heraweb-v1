@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Logo from './Logo';
 import { 
@@ -15,7 +16,8 @@ import {
     MeetingNotesIcon,
     ClockIcon,
     LogoutIcon,
-    SettingsIcon
+    SettingsIcon,
+    ManualIcon
 } from './Icons';
 import type { Page, User } from '../types';
 
@@ -93,6 +95,13 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, user, on
       </div>
       <div className="p-4">
         <ul>
+            <NavItem
+                icon={<ManualIcon />}
+                label="사용설명서"
+                page="user-manual"
+                currentPage={currentPage}
+                onClick={setCurrentPage}
+            />
             <NavItem
                 icon={<SettingsIcon />}
                 label="내 정보 / 변경"

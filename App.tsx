@@ -16,6 +16,7 @@ import ClassAttendance from './pages/ClassAttendance';
 import Teachers from './pages/Teachers';
 import LoginPage from './pages/LoginPage';
 import MyPage from './pages/MyPage';
+import UserManual from './pages/UserManual';
 import { useMockData } from './hooks/useMockData';
 import { useAuth } from './hooks/useAuth';
 import type { Page } from './types';
@@ -106,6 +107,8 @@ const App: React.FC = () => {
                 return <MeetingNotes meetingNotes={data.meetingNotes} setMeetingNotes={data.setMeetingNotes} teachers={data.teachers} />;
             case 'test-generator':
                 return <TestGenerator />;
+            case 'user-manual':
+                return <UserManual />;
             case 'mypage':
                 return auth.user ? <MyPage user={auth.user} onChangePassword={auth.changePassword} /> : null;
             default:
