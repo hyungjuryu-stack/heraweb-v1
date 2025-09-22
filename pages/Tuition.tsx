@@ -336,30 +336,56 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
     };
 
     const handleDeleteSelected = () => {
-        if (selectedIds.length === 0) return;
-
-        if (!window.confirm(`${selectedIds.length}개의 수강료 내역을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.`)) {
+        if (selectedIds.length === 0) {
+            alert('삭제할 항목을 선택해주세요.');
             return;
         }
 
-        // snapshot selected IDs to avoid stale closures
-        const idsToDelete = new Set(selectedIds);
+        const selectedStudentNames = selectedIds.map(id => {
+            const tuition = monthlyData.find(t => t.id === id);
+            const student = tuition ? studentMap.get(tuition.studentId) : null;
+            return student ? student.name : '알 수 없음';
+        }).join(', ');
 
-        // 1) remove from local monthlyData (handles newly generated / unsaved items too)
-        setMonthlyData(prevData => prevData.filter(t => !idsToDelete.has(t.id)));
-
-        // 2) remove from global state (handles already-saved items)
-        setTuitions(prev => prev.filter(t => !idsToDelete.has(t.id)));
-
-        // 3) clear selection and header checkbox immediately for better UX
-        setSelectedIds([]);
-        if (headerCheckboxRef.current) {
-            headerCheckboxRef.current.checked = false;
-            headerCheckboxRef.current.indeterminate = false;
+        if (!window.confirm(`선택된 ${selectedIds.length}개의 수강료 내역을 정말로 삭제하시겠습니까?\n\n대상 학생: ${selectedStudentNames}\n\n이 작업은 되돌릴 수 없습니다.`)) {
+            return;
         }
 
-        // 4) reset to first page to avoid landing on out-of-range page
-        setCurrentPage(1);
+        try {
+            // snapshot selected IDs to avoid stale closures
+            const idsToDelete = new Set(selectedIds);
+            const deletedCount = selectedIds.length;
+
+            // 1) remove from local monthlyData (handles newly generated / unsaved items too)
+            setMonthlyData(prevData => {
+                const filteredData = prevData.filter(t => !idsToDelete.has(t.id));
+                console.log(`로컬 데이터에서 ${prevData.length - filteredData.length}개 항목 삭제됨`);
+                return filteredData;
+            });
+
+            // 2) remove from global state (handles already-saved items)
+            setTuitions(prev => {
+                const filteredTuitions = prev.filter(t => !idsToDelete.has(t.id));
+                console.log(`전역 상태에서 ${prev.length - filteredTuitions.length}개 항목 삭제됨`);
+                return filteredTuitions;
+            });
+
+            // 3) clear selection and header checkbox immediately for better UX
+            setSelectedIds([]);
+            if (headerCheckboxRef.current) {
+                headerCheckboxRef.current.checked = false;
+                headerCheckboxRef.current.indeterminate = false;
+            }
+
+            // 4) reset to first page to avoid landing on out-of-range page
+            setCurrentPage(1);
+
+            // 5) show success message
+            alert(`${deletedCount}개의 수강료 내역이 성공적으로 삭제되었습니다.`);
+        } catch (error) {
+            console.error('삭제 중 오류 발생:', error);
+            alert('삭제 중 오류가 발생했습니다. 다시 시도해주세요.');
+        }
     };
 
     const enrichedData = useMemo(() => monthlyData.map(t => ({
@@ -491,7 +517,9 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
                 <>
                     <div className="flex flex-col md:flex-row justify-between items-center mb-4 p-2 bg-gray-800/50 rounded-lg gap-4">
                         <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
-                           <span className="text-white font-medium">{selectedIds.length}명 선택됨</span>
+                           <span className={`font-medium ${selectedIds.length > 0 ? 'text-yellow-400' : 'text-gray-400'}`}>
+                                {selectedIds.length > 0 ? `${selectedIds.length}명 선택됨` : '선택된 항목 없음'}
+                            </span>
                            <div className="flex items-center gap-2 border-l border-gray-600 pl-4">
                                 <label htmlFor="course-start-date" className="text-sm text-gray-300">수강 기간:</label>
                                 <input type="date" id="course-start-date" value={courseStartDate} onChange={e => setCourseStartDate(e.target.value)} className="bg-gray-700 border border-gray-600 rounded-md py-1 px-2 text-white text-sm"/>
@@ -509,9 +537,14 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
                             <button
                                 onClick={handleDeleteSelected}
                                 disabled={selectedIds.length === 0}
-                                className="bg-red-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed flex-1 md:flex-initial"
+                                className={`font-bold py-2 px-4 rounded-lg transition-colors flex-1 md:flex-initial ${
+                                    selectedIds.length === 0 
+                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed' 
+                                        : 'bg-red-600 text-white hover:bg-red-500'
+                                }`}
+                                title={selectedIds.length === 0 ? '삭제할 항목을 먼저 선택해주세요' : `${selectedIds.length}개 항목 삭제`}
                             >
-                                선택 삭제
+                                {selectedIds.length === 0 ? '선택 삭제' : `${selectedIds.length}개 삭제`}
                             </button>
                         </div>
                     </div>
