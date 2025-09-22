@@ -138,48 +138,33 @@ const NotificationPreviewModal: React.FC<{
     if (!isOpen || !date || !cls) return null;
 
     const dateString = date.toISOString().split('T')[0];
-    const poorHomeworkGrades: HomeworkGrade[] = ['C', 'D', 'F'];
+    const attitudeMap: Record<HomeworkGrade, string> = {
+        A: '매우좋음',
+        B: '좋음',
+        C: '보통',
+        D: '나쁨',
+        F: '매우나쁨'
+    };
 
     const studentsToReport = studentsInClass.map(student => {
         const record = recordsMap.get(`${student.id}-${dateString}`);
         const details: string[] = [];
-        let hasSomethingToReport = false;
 
         if (!record) {
-            // If there's no record, we can assume absence for notification purposes
-            details.push('결석');
-            hasSomethingToReport = true;
+            details.push('결석 (기록 없음)');
         } else {
-            // Attendance issues are a reason to report
-            if (record.attendance === '지각' || record.attendance === '결석') {
-                details.push(record.attendance);
-                hasSomethingToReport = true;
-            }
+            details.push(record.attendance);
+            details.push(`태도: ${attitudeMap[record.attitude]}(${record.attitude})`);
+            details.push(`과제: ${record.homework}`);
 
-            // Attitude or homework issues are a reason to report
-            if (['C', 'D', 'F'].includes(record.attitude)) {
-                details.push(`수업태도 미흡(${record.attitude})`);
-                hasSomethingToReport = true;
-            }
-            if (poorHomeworkGrades.includes(record.homework)) {
-                details.push(`과제 미흡(${record.homework})`);
-                hasSomethingToReport = true;
-            }
-
-            // Having test scores is always a reason to report
             const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
             if (scores.length > 0) {
-                // If reporting only for scores, also mention attendance status for context
-                if (!hasSomethingToReport && record.attendance === '출석') {
-                    details.push(record.attendance);
-                }
                 details.push(`테스트: ${scores.join(', ')}`);
-                hasSomethingToReport = true;
             }
         }
 
-        return { student, details, hasSomethingToReport };
-    }).filter(item => item.hasSomethingToReport);
+        return { student, details };
+    });
     
     const allStudentsAttendanceSummary = studentsInClass.reduce(
         (acc, student) => {
@@ -211,18 +196,17 @@ const NotificationPreviewModal: React.FC<{
                         </h4>
                     </div>
                     <div className="bg-white p-3 rounded space-y-1 text-sm">
-                       {studentsToReport.length > 0 ? (
-                            studentsToReport.map(({ student, details }) => {
-                                const hasPhone = student.motherPhone || (student.sendSmsToBoth && student.fatherPhone);
-                                return (
-                                <p key={student.id}>
-                                    - {student.name}: {details.join(', ')}
-                                    {!hasPhone && <span className="text-red-500 text-xs ml-2 font-semibold">(연락처 없음)</span>}
-                                </p>
-                                )
-                            })
-                       ) : (
-                           <p>전원 출석 및 특이사항 없음.</p>
+                       {studentsToReport.map(({ student, details }) => {
+                           const hasPhone = student.motherPhone || (student.sendSmsToBoth && student.fatherPhone);
+                           return (
+                               <p key={student.id}>
+                                   - {student.name}: {details.join(', ')}
+                                   {!hasPhone && <span className="text-red-500 text-xs ml-2 font-semibold">(연락처 없음)</span>}
+                               </p>
+                           );
+                       })}
+                       {studentsToReport.length === 0 && (
+                           <p>수업에 배정된 학생이 없습니다.</p>
                        )}
                         <div className="pt-2 mt-2 border-t border-gray-200 text-xs text-gray-600">
                            총원 {studentsInClass.length}명: 출석 {allStudentsAttendanceSummary.present}, 지각 {allStudentsAttendanceSummary.late}, 결석 {allStudentsAttendanceSummary.absent}
