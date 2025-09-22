@@ -235,7 +235,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
             const avgScore = scores.length > 0 ? Math.round(scores.reduce((sum, s) => sum + s, 0) / scores.length) : 0;
             
             // Calculate attitude
-            const attitudeScoreMap: Record<LessonRecord['attitude'], number> = { '매우 좋음': 100, '보통': 85, '안좋음': 60 };
+            const attitudeScoreMap: Record<HomeworkGrade, number> = { 'A': 100, 'B': 85, 'C': 70, 'D': 60, 'F': 50 };
             const totalAttitudeScore = records.reduce((sum, r) => sum + (attitudeScoreMap[r.attitude] || 85), 0);
             const attitudeRate = Math.round(totalAttitudeScore / records.length);
             
@@ -261,7 +261,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
         setGenerationError(null);
         try {
             const teacherName = selectedStudent.teacherId ? teacherMap.get(selectedStudent.teacherId) || null : null;
-            const review = await generateStudentReview(tempStudentDataForAI, recordsForPeriod, teacherName);
+            const review = await generateStudentReview(tempStudentDataForAI, recordsForPeriod, teacherName, selectedStudent.trendAnalysis || null);
             setFormData(prev => ({...prev, reviewText: review}));
         } catch (error: any) {
             setGenerationError(error.message || '리뷰 생성 중 오류가 발생했습니다.');
@@ -389,7 +389,6 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                                     </div>
                                     <div className="h-48">
                                         <ResponsiveContainer width="100%" height="100%">
-                                            {/* Fix: Removed isAnimationActive from RadarChart as it's not a valid prop here. It is correctly on the Radar component. */}
                                             <RadarChart cx="50%" cy="50%" outerRadius="80%" data={chartData}>
                                                 <PolarGrid gridType="circle" stroke="rgba(255, 255, 255, 0.2)" />
                                                 <PolarAngleAxis dataKey="subject" tick={{ fill: '#d1d5db', fontSize: 12 }} />

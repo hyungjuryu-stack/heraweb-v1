@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import Card from './ui/Card';
-import type { Student, MonthlyReport, Tuition, Counseling } from '../types';
+import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis } from '../types';
 import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon } from './Icons';
 import TrendAnalysisModal from './TrendAnalysisModal';
 
@@ -13,6 +13,7 @@ interface StudentDetailViewProps {
   tuitions: Tuition[];
   counselings: Counseling[];
   teacherMap: Map<number, string>;
+  onSaveAnalysis: (studentId: number, analysis: TrendAnalysis) => void;
 }
 
 const ReportList: React.FC<{ studentId: number, monthlyReports: MonthlyReport[] }> = ({ studentId, monthlyReports }) => {
@@ -94,6 +95,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   tuitions,
   counselings,
   teacherMap,
+  onSaveAnalysis,
 }) => {
   type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis';
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
@@ -176,6 +178,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         onClose={() => setIsAnalysisModalOpen(false)}
         student={student}
         reports={monthlyReports}
+        onSaveAnalysis={(analysis) => onSaveAnalysis(student.id, analysis)}
       />
     </>
   );

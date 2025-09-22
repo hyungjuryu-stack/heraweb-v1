@@ -107,7 +107,7 @@ export const generateTest = async (grade: string, unit: string, numQuestions: nu
 };
 
 
-export const generateStudentReview = async (student: Student & { attitudeRate: number }, studentRecords: LessonRecord[], teacherName: string | null): Promise<string> => {
+export const generateStudentReview = async (student: Student & { attitudeRate: number }, studentRecords: LessonRecord[], teacherName: string | null, trendAnalysis: TrendAnalysis | null): Promise<string> => {
   try {
     const recordsSummary = studentRecords.length > 0
       ? `해당 기간의 전체 수업 기록:\n` + studentRecords.map(r => {
@@ -120,6 +120,16 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
             + (r.requested_test ? `, 요청사항(${r.requested_test})` : '');
         }).join('\n')
       : "해당 기간의 수업 기록이 없습니다.";
+
+    const trendAnalysisSummary = trendAnalysis
+      ? `
+      **참고 자료 (장기 학습 트렌드 AI 분석 요약):**
+      - 전체 추세: ${trendAnalysis.overallTrend}
+      - 강점: ${trendAnalysis.keyStrengths}
+      - 성장 영역: ${trendAnalysis.areasForGrowth}
+      - 추천 전략: ${trendAnalysis.recommendations.join('; ')}
+      `
+      : "장기 학습 트렌드 분석 자료 없음.";
 
     const prompt = `
       **당신은 학생을 오랫동안 세심하게 지켜본, 경험 많고 자상한 수학 선생님입니다.** 학생의 학부모님께 보낼 월간 리포트 종합 리뷰를 작성해주세요.
@@ -140,7 +150,11 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
       - 진단 테스트 총평: ${student.diagnosticTestNotes || '없음'}
       - ${recordsSummary}
 
+      ${trendAnalysisSummary}
+
       **작성 지침:**
+      **0. (중요) 장기 추세 연계:** '장기 학습 트렌드' 분석 결과가 있다면, 월간 리뷰에 자연스럽게 반영해주세요. 예를 들어, "AI 장기 분석에서 나타난 것처럼, ${student.name} 학생은 꾸준한 상승세를 보이고 있으며, 이번 달에도 그 경향이 이어졌습니다." 와 같이 시작하면 좋습니다.
+      
       **1. 학습 태도 및 성취도 (4-5문장):**
           - 따뜻한 인사말로 시작하여, 한 달간 학생의 전반적인 학습 태도와 분위기를 이야기하듯 풀어주세요.
           - 정량 데이터와 수업 기록을 엮어 학생의 **'성장 스토리'**를 들려주세요. 예를 들어, "이번 달 ${student.name} 학생은 꾸준한 성실함으로 교과 과정을 잘 따라왔습니다. 특히 월초에 다소 어려워했던 '함수' 단원에서, 월말 평가 때는 모든 문제를 맞추며 눈에 띄는 성장을 이루어냈습니다." 와 같이 **시간의 흐름에 따른 변화**를 구체적으로 보여주세요.
@@ -159,7 +173,7 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
           - "가정에서 ${student.name} 학생이 어려운 문제에 부딪혔을 때, 바로 답을 알려주시기보다 스스로 해결할 시간을 충분히 주시고 그 노력의 과정을 칭찬해주시면 아이의 자신감 향상에 큰 도움이 될 것입니다. 주말에 함께 서점을 방문하여 다양한 수학 관련 교양 서적을 접하게 해주시는 것도 수학적 흥미를 높이는 좋은 방법입니다."
 
       **최종 결과물:**
-      - 위 4가지 항목을 **소제목이나 번호 없이 하나의 완성된 글**로 자연스럽게 연결해주세요.
+      - 위 항목들을 **소제목이나 번호 없이 하나의 완성된 글**로 자연스럽게 연결해주세요.
       - **분량은 이전보다 2배 이상**으로 풍부하고 상세하게 작성해주세요.
       - **가장 중요한 것은 '진심'입니다. AI가 아닌, 학생을 아끼는 선생님의 마음으로 작성해주세요.**
     `;

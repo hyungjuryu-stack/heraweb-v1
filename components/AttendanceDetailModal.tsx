@@ -1,4 +1,5 @@
 
+
 import React, { useState, useEffect, useLayoutEffect, useRef } from 'react';
 import type { LessonRecord, HomeworkGrade } from '../types';
 
@@ -25,7 +26,8 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
     testScore2: null,
     testScore3: null,
     homework: 'A',
-    attitude: '보통',
+    // Fix: Type '"보통"' is not assignable to type 'HomeworkGrade'.
+    attitude: 'B',
     notes: '',
     requested_test: '',
     main_textbook: '',
@@ -111,10 +113,8 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
             </div>
             <div>
               <label htmlFor="attitude" className="block text-xs font-medium text-gray-300 mb-1">태도</label>
-              <select id="attitude" value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}>
-                  <option>매우 좋음</option>
-                  <option>보통</option>
-                  <option>안좋음</option>
+              <select id="attitude" value={formData.attitude} onChange={e => handleChange('attitude', e.target.value as HomeworkGrade)} className={commonSelectClass}>
+                  {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>

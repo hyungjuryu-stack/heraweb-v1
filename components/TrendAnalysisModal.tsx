@@ -8,40 +8,51 @@ interface TrendAnalysisModalProps {
   onClose: () => void;
   student: Student;
   reports: MonthlyReport[];
+  onSaveAnalysis: (analysis: TrendAnalysis) => void;
 }
 
-const TrendAnalysisModal: React.FC<TrendAnalysisModalProps> = ({ isOpen, onClose, student, reports }) => {
+const TrendAnalysisModal: React.FC<TrendAnalysisModalProps> = ({ isOpen, onClose, student, reports, onSaveAnalysis }) => {
   const [analysis, setAnalysis] = useState<TrendAnalysis | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
   const studentReports = reports.filter(r => r.studentId === student.id);
 
-  useEffect(() => {
-    const performAnalysis = async () => {
-      if (studentReports.length < 2) {
-        setError("장기 추세 분석을 위해서는 최소 2개 이상의 리포트가 필요합니다.");
-        return;
-      }
-
-      setIsLoading(true);
-      setError(null);
-      setAnalysis(null);
-
-      try {
-        const result = await generateTrendAnalysis(student, studentReports);
-        setAnalysis(result);
-      } catch (err: any) {
-        setError(err.message || '분석 중 알 수 없는 오류가 발생했습니다.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    if (isOpen) {
-      performAnalysis();
+  const performAnalysis = async () => {
+    if (studentReports.length < 2) {
+      setError("장기 추세 분석을 위해서는 최소 2개 이상의 리포트가 필요합니다.");
+      setIsLoading(false);
+      return;
     }
-  }, [isOpen, student, reports]); // re-run if student or reports change while modal might be open
+
+    setIsLoading(true);
+    setError(null);
+    setAnalysis(null);
+
+    try {
+      const result = await generateTrendAnalysis(student, studentReports);
+      setAnalysis(result);
+      onSaveAnalysis(result); // Save the newly generated analysis
+    } catch (err: any) {
+      setError(err.message || '분석 중 알 수 없는 오류가 발생했습니다.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      // If there's a saved analysis, show it immediately.
+      // Otherwise, generate a new one.
+      if (student.trendAnalysis) {
+        setAnalysis(student.trendAnalysis);
+        setError(null);
+        setIsLoading(false);
+      } else {
+        performAnalysis();
+      }
+    }
+  }, [isOpen, student]);
 
   if (!isOpen) return null;
   
@@ -103,7 +114,15 @@ const TrendAnalysisModal: React.FC<TrendAnalysisModalProps> = ({ isOpen, onClose
           <div className="max-h-[70vh] overflow-y-auto pr-2">
             {renderContent()}
           </div>
-          <div className="mt-8 flex justify-end">
+          <div className="mt-8 flex justify-between items-center">
+             <button 
+                type="button" 
+                onClick={performAnalysis} 
+                disabled={isLoading}
+                className="py-2 px-4 rounded-lg bg-gray-600 hover:bg-gray-500 transition-colors text-white font-medium disabled:bg-gray-700 disabled:cursor-not-allowed"
+            >
+                새로 분석하기
+            </button>
             <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-white font-medium">
               닫기
             </button>

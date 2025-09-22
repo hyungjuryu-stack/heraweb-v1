@@ -1,4 +1,5 @@
 
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import type { LessonRecord, Student, Class, Teacher, HomeworkGrade } from '../types';
@@ -23,16 +24,17 @@ const NotificationPreviewModal: React.FC<{
 }> = ({ isOpen, onClose, onConfirm, record, student, className }) => {
     if (!isOpen || !record || !student) return null;
 
-    const poorHomeworkGrades: HomeworkGrade[] = ['C', 'D', 'F'];
+    const poorGrades: HomeworkGrade[] = ['C', 'D', 'F'];
     const details: string[] = [];
 
     if (record.attendance !== '출석') {
         details.push(record.attendance);
     }
-    if (record.attitude === '안좋음') {
-        details.push('수업태도 안좋음');
+    // Fix: This comparison appears to be unintentional because the types 'HomeworkGrade' and '"안좋음"' have no overlap.
+    if (poorGrades.includes(record.attitude)) {
+        details.push(`수업태도 미흡(${record.attitude})`);
     }
-    if (poorHomeworkGrades.includes(record.homework)) {
+    if (poorGrades.includes(record.homework)) {
         details.push(`과제 미흡(${record.homework})`);
     }
     const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
@@ -258,7 +260,8 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
       if (!record) return false;
       const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
       return record.attendance !== '출석' ||
-             record.attitude === '안좋음' ||
+             // Fix: This comparison appears to be unintentional because the types 'HomeworkGrade' and '"안좋음"' have no overlap.
+             poorHomeworkGrades.includes(record.attitude) ||
              poorHomeworkGrades.includes(record.homework) ||
              scores.length > 0;
     };

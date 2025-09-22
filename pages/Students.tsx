@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling } from '../types';
+import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, TrendAnalysis } from '../types';
 import { StudentStatus } from '../types';
 import StudentModal from '../components/StudentModal';
 import StudentDetailView from '../components/StudentDetailView';
@@ -195,6 +195,7 @@ const Students: React.FC<StudentsPageProps> = ({
             avgScore: 0,
             attendanceRate: 100,
             homeworkRate: 100,
+            trendAnalysis: undefined,
         };
         setStudents([...students, updatedStudent]);
     }
@@ -236,6 +237,17 @@ const Students: React.FC<StudentsPageProps> = ({
     }
 
     handleCloseModal();
+  };
+  
+  const handleSaveAnalysis = (studentId: number, analysis: TrendAnalysis) => {
+    const studentToUpdate = students.find(s => s.id === studentId);
+    if (studentToUpdate) {
+        const updatedStudent = { ...studentToUpdate, trendAnalysis: analysis };
+        setStudents(prev => prev.map(s => (s.id === studentId ? updatedStudent : s)));
+        if (viewingStudent?.id === studentId) {
+            setViewingStudent(updatedStudent);
+        }
+    }
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -366,6 +378,7 @@ const Students: React.FC<StudentsPageProps> = ({
                   tuitions={tuitions}
                   counselings={counselings}
                   teacherMap={teacherMap}
+                  onSaveAnalysis={handleSaveAnalysis}
                 />
             ) : (
                 <Card className="flex items-center justify-center h-24">

@@ -86,7 +86,7 @@ const AttendanceRecordEdit: React.FC<{
         testScore2: record?.testScore2 || null,
         testScore3: record?.testScore3 || null,
         homework: record?.homework || 'A',
-        attitude: record?.attitude || '보통',
+        attitude: record?.attitude || 'B',
         notes: record?.notes || '',
         requested_test: record?.requested_test || '',
         main_textbook: record?.main_textbook || '',
@@ -105,7 +105,7 @@ const AttendanceRecordEdit: React.FC<{
         <div className="absolute inset-0 bg-[#0d211c] p-1 z-10 border-2 border-yellow-500 rounded-md text-xs flex flex-col space-y-1">
             <div className="grid grid-cols-3 gap-1">
                 <select value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}><option>출석</option><option>지각</option><option>결석</option></select>
-                <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value)} className={commonSelectClass}><option>매우 좋음</option><option>보통</option><option>안좋음</option></select>
+                <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
                 <select value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
             </div>
             <div className="grid grid-cols-3 gap-1">
@@ -157,8 +157,8 @@ const NotificationPreviewModal: React.FC<{
             }
 
             // Attitude or homework issues are a reason to report
-            if (record.attitude === '안좋음') {
-                details.push('수업태도 안좋음');
+            if (['C', 'D', 'F'].includes(record.attitude)) {
+                details.push(`수업태도 미흡(${record.attitude})`);
                 hasSomethingToReport = true;
             }
             if (poorHomeworkGrades.includes(record.homework)) {
@@ -357,7 +357,7 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
               const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
               return record.attendance === '지각' ||
                      record.attendance === '결석' ||
-                     record.attitude === '안좋음' ||
+                     ['C', 'D', 'F'].includes(record.attitude) ||
                      poorHomeworkGrades.includes(record.homework) ||
                      scores.length > 0;
           });

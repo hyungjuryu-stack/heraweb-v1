@@ -144,6 +144,7 @@ const createInitialData = () => {
             teacherId: null,
             avgScore, attendanceRate, homeworkRate, diagnosticTestNotes,
             diagnosticTestScore: Math.random() > 0.3 ? getRandomInt(70, 95).toString() : `${getRandomInt(17, 24)}/25`,
+            trendAnalysis: undefined,
         });
     });
 
@@ -281,7 +282,7 @@ const createInitialData = () => {
                         testScore2: createScore(),
                         testScore3: createScore(),
                         homework: getRandom(homeworkGrades), 
-                        attitude: getRandom(['매우 좋음', '보통', '안좋음']), 
+                        attitude: getRandom(homeworkGrades), 
                         notes: Math.random() > 0.8 ? (Math.random() > 0.5 ? getRandom(positiveNotes) : getRandom(negativeNotes)) : '',
                         requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
                         main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,

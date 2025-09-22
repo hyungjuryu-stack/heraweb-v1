@@ -60,7 +60,12 @@ const App: React.FC = () => {
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
-                return <Dashboard dashboardData={data.dashboardData} />;
+                return <Dashboard 
+                    dashboardData={data.dashboardData}
+                    students={data.students}
+                    classes={data.classes}
+                    teachers={data.teachers}
+                />;
             case 'students':
                 return <Students 
                     students={data.students} setStudents={data.setStudents}
@@ -104,7 +109,12 @@ const App: React.FC = () => {
             case 'mypage':
                 return auth.user ? <MyPage user={auth.user} onChangePassword={auth.changePassword} /> : null;
             default:
-                return <Dashboard dashboardData={data.dashboardData} />;
+                return <Dashboard 
+                    dashboardData={data.dashboardData}
+                    students={data.students}
+                    classes={data.classes}
+                    teachers={data.teachers}
+                />;
         }
     };
 

@@ -31,6 +31,7 @@ export interface Student {
   homeworkRate: number;
   diagnosticTestScore: string | null;
   diagnosticTestNotes: string;
+  trendAnalysis?: TrendAnalysis;
 }
 
 export interface Class {
@@ -69,7 +70,7 @@ export interface LessonRecord {
   testScore2: string | null;
   testScore3: string | null;
   homework: HomeworkGrade;
-  attitude: '매우 좋음' | '보통' | '안좋음';
+  attitude: HomeworkGrade;
   notes: string;
   requested_test: string;
   main_textbook: string;
