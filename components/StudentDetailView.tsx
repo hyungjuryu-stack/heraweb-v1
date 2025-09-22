@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+
+import React, { useState } from 'react';
 import Card from './ui/Card';
-import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis } from '../types';
-import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon, ClockIcon } from './Icons';
+import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis, LessonSummary } from '../types';
+import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon, ClockIcon, SummariesIcon } from './Icons';
 import TrendAnalysisView from './TrendAnalysisModal';
 
 interface StudentDetailViewProps {
@@ -14,6 +15,7 @@ interface StudentDetailViewProps {
   counselings: Counseling[];
   teacherMap: Map<number, string>;
   onSaveAnalysis: (studentId: number, analysis: TrendAnalysis) => void;
+  onDeleteSummary: (summaryId: number) => void;
 }
 
 const ReportList: React.FC<{ studentId: number, monthlyReports: MonthlyReport[] }> = ({ studentId, monthlyReports }) => {
@@ -182,6 +184,36 @@ const StudyPeriodView: React.FC<{ student: Student }> = ({ student }) => {
     );
 };
 
+const SummaryList: React.FC<{ student: Student; onDelete: (summaryId: number) => void; }> = ({ student, onDelete }) => {
+    const summaries = student.lessonSummaries || [];
+
+    if (summaries.length === 0) {
+        return <div className="text-center text-gray-500 py-4">저장된 AI 요약 기록이 없습니다.</div>;
+    }
+
+    return (
+        <div className="p-2 space-y-3">
+            {summaries.sort((a,b) => b.generatedDate.localeCompare(a.generatedDate)).map(summary => (
+                <div key={summary.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
+                    <div className="flex justify-between items-start">
+                        <div>
+                            <p className="font-bold text-gray-200">분석 기간: {summary.period}</p>
+                            <p className="text-xs text-gray-400 mt-1">생성일: {summary.generatedDate}</p>
+                        </div>
+                        <button 
+                            onClick={() => onDelete(summary.id)}
+                            className="text-red-400 hover:text-red-300 text-xs font-semibold"
+                        >
+                            삭제
+                        </button>
+                    </div>
+                    <p className="text-gray-300 mt-2 whitespace-pre-wrap">{summary.summary}</p>
+                </div>
+            ))}
+        </div>
+    );
+};
+
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   student,
   allStudents,
@@ -192,8 +224,9 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   counselings,
   teacherMap,
   onSaveAnalysis,
+  onDeleteSummary,
 }) => {
-  type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis' | 'study-period';
+  type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis' | 'study-period' | 'summaries';
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
 
   const siblingNames = student.siblings
@@ -252,7 +285,8 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         <TabButton icon={<TuitionIcon className="w-5 h-5 mr-2" />} label="수강료" tab="tuition" />
         <TabButton icon={<CounselingIcon className="w-5 h-5 mr-2"/>} label="상담" tab="counseling" />
         <TabButton icon={<ClockIcon className="w-5 h-5 mr-2"/>} label="수강 기간" tab="study-period" />
-        <TabButton icon={<AnalysisIcon className="w-5 h-5 mr-2"/>} label="AI 분석" tab="analysis" />
+        <TabButton icon={<AnalysisIcon className="w-5 h-5 mr-2"/>} label="AI 장기분석" tab="analysis" />
+        <TabButton icon={<SummariesIcon className="w-5 h-5 mr-2"/>} label="AI 요약기록" tab="summaries" />
       </div>
 
       <div className="max-h-[55vh] overflow-y-auto pr-2">
@@ -267,6 +301,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 onSaveAnalysis={(analysis) => onSaveAnalysis(student.id, analysis)}
             />
         )}
+        {activeDetailTab === 'summaries' && <SummaryList student={student} onDelete={onDeleteSummary} />}
       </div>
     </Card>
   );

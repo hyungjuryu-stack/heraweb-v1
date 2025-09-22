@@ -239,3 +239,54 @@ export const generateTrendAnalysis = async (student: Student, reports: MonthlyRe
         throw new Error("학습 트렌드 분석에 실패했습니다. 잠시 후 다시 시도해주세요.");
     }
 };
+
+export const generateLessonSummary = async (student: Student, records: LessonRecord[], period: { startDate: string, endDate: string }): Promise<string> => {
+  try {
+    const recordsSummary = records.length > 0
+      ? records.map(r => {
+        const tests = [r.testScore1, r.testScore2, r.testScore3].filter(Boolean).join(', ');
+        return `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework}), 자기주도(${r.selfDirectedLearning})`
+          + (tests ? `, 테스트(${tests})` : '')
+          + (r.notes ? `, 노트: ${r.notes}` : '');
+      }).join('\n')
+      : "해당 기간의 수업 기록이 없습니다.";
+
+    const prompt = `
+      **당신은 학생의 학습 기록을 분석하여 핵심 내용을 요약하는 교육 전문가입니다.** 선생님이 학생의 진도를 빠르게 파악할 수 있도록, 아래 데이터를 바탕으로 간결하고 명확한 요약문을 작성해주세요.
+
+      **학생 정보:**
+      - 이름: ${student.name}
+      - 학년: ${student.grade}
+
+      **분석 기간:**
+      - 시작일: ${period.startDate || '전체'}
+      - 종료일: ${period.endDate || '전체'}
+
+      **수업 기록 데이터:**
+      ${recordsSummary}
+
+      **작성 지침:**
+      1.  **종합 평가 (2-3문장):** 기간 내 학생의 전반적인 학습 태도, 출결 상황, 과제 수행도를 종합하여 평가해주세요.
+      2.  **성취도 분석 (2-3문장):** 테스트 점수의 변화(상승, 하락, 유지)를 언급하고, 기록된 노트를 바탕으로 학생이 강점을 보이거나 어려움을 겪는 부분을 짚어주세요.
+      3.  **주요 관찰 사항 (1-2문장):** 선생님의 노트에서 반복적으로 나타나거나 특히 주목할 만한 내용이 있다면 간략하게 언급해주세요.
+
+      **출력 형식:**
+      - 각 항목을 구분하여 명확하게 서술해주세요.
+      - 딱딱한 보고서가 아닌, 인수인계 하듯 자연스러운 전문가의 어조를 사용해주세요.
+    `;
+    
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        temperature: 0.6,
+      },
+    });
+    
+    return response.text;
+
+  } catch (error) {
+    console.error("Error generating lesson summary:", error);
+    throw new Error("학습 요약 생성에 실패했습니다.");
+  }
+};

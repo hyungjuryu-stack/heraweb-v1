@@ -1,3 +1,4 @@
+
 import { useState } from 'react';
 import { StudentStatus } from '../types';
 import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, AcademyEvent, MeetingNote, Position, HomeworkGrade } from '../types';
@@ -145,6 +146,7 @@ const createInitialData = () => {
             avgScore, attendanceRate, homeworkRate, diagnosticTestNotes,
             diagnosticTestScore: Math.random() > 0.3 ? getRandomInt(70, 95).toString() : `${getRandomInt(17, 24)}/25`,
             trendAnalysis: undefined,
+            lessonSummaries: [],
         });
     });
 

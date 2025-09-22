@@ -1,3 +1,4 @@
+
 export enum StudentStatus {
   ENROLLED = '재원',
   CONSULTING = '상담',
@@ -32,6 +33,14 @@ export interface Student {
   diagnosticTestScore: string | null;
   diagnosticTestNotes: string;
   trendAnalysis?: TrendAnalysis;
+  lessonSummaries?: LessonSummary[];
+}
+
+export interface LessonSummary {
+  id: number;
+  period: string;
+  summary: string;
+  generatedDate: string;
 }
 
 export interface Class {

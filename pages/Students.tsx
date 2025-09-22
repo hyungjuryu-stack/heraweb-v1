@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Counseling, TrendAnalysis } from '../types';
@@ -196,6 +197,7 @@ const Students: React.FC<StudentsPageProps> = ({
             attendanceRate: 100,
             homeworkRate: 100,
             trendAnalysis: undefined,
+            lessonSummaries: [],
         };
         setStudents([...students, updatedStudent]);
     }
@@ -244,6 +246,22 @@ const Students: React.FC<StudentsPageProps> = ({
     if (viewingStudent?.id === studentId) {
         setViewingStudent(prev => prev ? { ...prev, trendAnalysis: analysis } : null);
     }
+  };
+
+  const handleDeleteSummary = (studentId: number, summaryId: number) => {
+    if (!window.confirm("이 AI 요약을 삭제하시겠습니까?")) return;
+    setStudents(prevStudents => {
+        const newStudents = prevStudents.map(s => {
+            if (s.id === studentId) {
+                const updatedSummaries = s.lessonSummaries?.filter(summary => summary.id !== summaryId);
+                const updatedStudent = { ...s, lessonSummaries: updatedSummaries };
+                if (viewingStudent?.id === studentId) setViewingStudent(updatedStudent);
+                return updatedStudent;
+            }
+            return s;
+        });
+        return newStudents;
+    });
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -375,6 +393,7 @@ const Students: React.FC<StudentsPageProps> = ({
                   counselings={counselings}
                   teacherMap={teacherMap}
                   onSaveAnalysis={handleSaveAnalysis}
+                  onDeleteSummary={(summaryId) => viewingStudent && handleDeleteSummary(viewingStudent.id, summaryId)}
                 />
             ) : (
                 <Card className="flex items-center justify-center h-24">

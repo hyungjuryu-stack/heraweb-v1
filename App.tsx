@@ -1,5 +1,4 @@
 
-
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
@@ -84,7 +83,8 @@ const App: React.FC = () => {
                 return <LessonRecords 
                     lessonRecords={data.lessonRecords} 
                     setLessonRecords={data.setLessonRecords} 
-                    students={data.students} 
+                    students={data.students}
+                    setStudents={data.setStudents}
                     classes={data.classes} 
                     teachers={data.teachers} 
                 />;
