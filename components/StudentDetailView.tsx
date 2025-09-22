@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Card from './ui/Card';
 import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis } from '../types';
-import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon } from './Icons';
+import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon, ClockIcon } from './Icons';
 import TrendAnalysisView from './TrendAnalysisModal';
 
 interface StudentDetailViewProps {
@@ -86,6 +86,65 @@ const CounselingList: React.FC<{ studentId: number, counselings: Counseling[], t
     );
 };
 
+const StudyPeriodView: React.FC<{ student: Student }> = ({ student }) => {
+    const calculateDuration = (start: string, end?: string) => {
+        const startDate = new Date(start);
+        const endDate = end ? new Date(end) : new Date(); // Use today if not withdrawn
+
+        let years = endDate.getFullYear() - startDate.getFullYear();
+        let months = endDate.getMonth() - startDate.getMonth();
+        let days = endDate.getDate() - startDate.getDate();
+
+        if (days < 0) {
+            months--;
+            const prevMonthLastDay = new Date(endDate.getFullYear(), endDate.getMonth(), 0).getDate();
+            days += prevMonthLastDay;
+        }
+
+        if (months < 0) {
+            years--;
+            months += 12;
+        }
+
+        const parts = [];
+        if (years > 0) parts.push(`${years}년`);
+        if (months > 0) parts.push(`${months}개월`);
+        if (days > 0) parts.push(`${days}일`);
+
+        if (parts.length === 0) {
+            return "0일";
+        }
+
+        return parts.join(' ');
+    };
+
+    const duration = calculateDuration(student.enrollmentDate, student.withdrawalDate);
+
+    return (
+        <div className="p-4">
+            <div className="bg-gray-800/50 p-4 rounded-lg">
+                <h4 className="text-md font-bold text-[#E5A823] mb-3">재원 기간 정보</h4>
+                <div className="space-y-2 text-sm">
+                    <div className="flex justify-between pb-2 border-b border-gray-700/50 mb-2">
+                        <span className="text-gray-400">총 재원 기간:</span>
+                        <span className="font-bold text-lg text-[#E5A823]">{duration}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">입학일:</span>
+                        <span className="font-semibold text-white">{student.enrollmentDate}</span>
+                    </div>
+                    <div className="flex justify-between">
+                        <span className="text-gray-400">상태:</span>
+                        <span className="font-semibold text-white">
+                            {student.status === '퇴원' ? `퇴원 (${student.withdrawalDate})` : '재원 중'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   student,
   allStudents,
@@ -97,7 +156,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   teacherMap,
   onSaveAnalysis,
 }) => {
-  type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis';
+  type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis' | 'study-period';
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
 
   const siblingNames = student.siblings
@@ -155,6 +214,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         <TabButton icon={<ReportsIcon className="w-5 h-5 mr-2" />} label="리포트" tab="reports" />
         <TabButton icon={<TuitionIcon className="w-5 h-5 mr-2" />} label="수강료" tab="tuition" />
         <TabButton icon={<CounselingIcon className="w-5 h-5 mr-2"/>} label="상담" tab="counseling" />
+        <TabButton icon={<ClockIcon className="w-5 h-5 mr-2"/>} label="수강 기간" tab="study-period" />
         <TabButton icon={<AnalysisIcon className="w-5 h-5 mr-2"/>} label="AI 분석" tab="analysis" />
       </div>
 
@@ -162,6 +222,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
         {activeDetailTab === 'reports' && <ReportList studentId={student.id} monthlyReports={monthlyReports} />}
         {activeDetailTab === 'tuition' && <TuitionList studentId={student.id} tuitions={tuitions} />}
         {activeDetailTab === 'counseling' && <CounselingList studentId={student.id} counselings={counselings} teacherMap={teacherMap} />}
+        {activeDetailTab === 'study-period' && <StudyPeriodView student={student} />}
         {activeDetailTab === 'analysis' && (
             <TrendAnalysisView
                 student={student}
