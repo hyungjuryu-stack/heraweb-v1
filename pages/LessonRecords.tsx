@@ -45,6 +45,7 @@ const NotificationPreviewModal: React.FC<{
 
     const message = details.length > 0 ? details.join(', ') : '특이사항 없음.';
     const date = new Date(record.date);
+    const canBeNotified = student && (student.motherPhone || (student.sendSmsToBoth && student.fatherPhone));
 
     return (
         <div className="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 backdrop-blur-sm" onClick={onClose} role="dialog" aria-modal="true">
@@ -69,11 +70,16 @@ const NotificationPreviewModal: React.FC<{
                             <p className="text-xs text-gray-500 mt-2 text-center">
                                 * 위 내용은 학부모님께 카카오톡 알림톡으로 재발송됩니다.
                             </p>
+                            {!canBeNotified && (
+                                <p className="text-xs text-red-400 mt-2 text-center font-semibold">
+                                    * 학부모 연락처가 등록되지 않아 발송이 불가능합니다.
+                                </p>
+                            )}
                         </div>
                     </div>
                     <div className="px-6 py-4 flex justify-end space-x-4 border-t border-gray-700/50">
                         <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-700 hover:bg-gray-600">취소</button>
-                        <button type="button" onClick={onConfirm} className="py-2 px-4 rounded-lg bg-[#E5A823] hover:bg-yellow-400 text-gray-900 font-bold">재발송</button>
+                        <button type="button" onClick={onConfirm} disabled={!canBeNotified} className="py-2 px-4 rounded-lg bg-[#E5A823] hover:bg-yellow-400 text-gray-900 font-bold disabled:bg-gray-600 disabled:cursor-not-allowed">재발송</button>
                     </div>
                 </div>
             </div>
@@ -100,7 +106,7 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
     const [sendingStatus, setSendingStatus] = useState<Record<number, 'sending' | 'sent'>>({});
     const [previewRecord, setPreviewRecord] = useState<LessonRecord | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
-    const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+    const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
 
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
@@ -448,6 +454,7 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                       className="bg-gray-700 border border-gray-600 rounded-md py-1 pl-2 pr-8 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
                       aria-label="페이지당 표시 인원"
                     >
+                      <option value={10}>10</option>
                       <option value={20}>20</option>
                       <option value={30}>30</option>
                       <option value={40}>40</option>

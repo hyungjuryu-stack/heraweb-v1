@@ -212,9 +212,15 @@ const NotificationPreviewModal: React.FC<{
                     </div>
                     <div className="bg-white p-3 rounded space-y-1 text-sm">
                        {studentsToReport.length > 0 ? (
-                            studentsToReport.map(({ student, details }) => (
-                                <p key={student.id}>- {student.name}: {details.join(', ')}</p>
-                            ))
+                            studentsToReport.map(({ student, details }) => {
+                                const hasPhone = student.motherPhone || (student.sendSmsToBoth && student.fatherPhone);
+                                return (
+                                <p key={student.id}>
+                                    - {student.name}: {details.join(', ')}
+                                    {!hasPhone && <span className="text-red-500 text-xs ml-2 font-semibold">(연락처 없음)</span>}
+                                </p>
+                                )
+                            })
                        ) : (
                            <p>전원 출석 및 특이사항 없음.</p>
                        )}

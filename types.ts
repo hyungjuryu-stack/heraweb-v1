@@ -93,17 +93,23 @@ export interface MonthlyReport {
 }
 
 export interface Tuition {
-  id: number;
+  id: string; // Unique ID: studentId + month
   studentId: number;
-  course: string;
-  plan: string;
+  month: string; // YYYY-MM format
+  calculationPeriodStart: string; // YYYY-MM-DD
+  calculationPeriodEnd: string; // YYYY-MM-DD
   baseFee: number;
-  siblingDiscount: boolean;
-  totalFee: number;
-  cashReceiptPhone: string;
-  paymentMethod: '카드' | '현금' | '이체';
+  baseSessions: number;
+  perSessionFee: number;
+  scheduledSessions: number;
+  siblingDiscountRate: number; // e.g., 0.1 for 10%
+  siblingDiscountAmount: number; // Calculated amount
+  otherDiscount: number; // Manual adjustments
+  finalFee: number;
   paymentStatus: '결제완료' | '미결제';
+  notes: string;
 }
+
 
 export interface Counseling {
   id: number;
@@ -113,6 +119,7 @@ export interface Counseling {
   teacherId: number;
   content: string;
   followUp: string;
+  type?: string;
 }
 
 export interface AcademyEvent {

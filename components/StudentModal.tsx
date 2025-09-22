@@ -262,8 +262,8 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
                 <div className="space-y-4">
                   <div className="p-3 bg-gray-800/50 rounded-lg space-y-2">
                       <label className="block text-sm font-medium text-gray-300">학부모 (모)</label>
-                      <input type="text" name="motherName" placeholder="이름" value={formData.motherName} onChange={handleChange} required className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
-                      <input type="tel" name="motherPhone" placeholder="연락처" value={formData.motherPhone} onChange={handleChange} required className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
+                      <input type="text" name="motherName" placeholder="이름" value={formData.motherName} onChange={handleChange} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
+                      <input type="tel" name="motherPhone" placeholder="연락처" value={formData.motherPhone} onChange={handleChange} className="w-full bg-gray-700 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" />
                   </div>
                   <div className="p-3 bg-gray-800/50 rounded-lg space-y-2">
                       <label className="block text-sm font-medium text-gray-300">학부모 (부)</label>

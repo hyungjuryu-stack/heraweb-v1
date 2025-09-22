@@ -89,7 +89,8 @@ const App: React.FC = () => {
             case 'reports':
                 return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} classes={data.classes}/>;
             case 'tuition':
-                return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} />;
+                // FIX: Added the missing 'classes' prop required by the Tuition component for calculations.
+                return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} classes={data.classes} />;
             case 'counseling':
                 return <Counseling counselings={data.counselings} setCounselings={data.setCounselings} students={data.students} teachers={data.teachers} />;
             case 'schedule':

@@ -19,6 +19,8 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [expandedClassId, setExpandedClassId] = useState<number | null>(null);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
   
   const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
@@ -56,6 +58,58 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
     }
     return sortableItems;
   }, [classes, sortConfig, teacherMap]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [itemsPerPage]);
+
+  const { currentTableData, totalPages } = useMemo(() => {
+    const numItems = sortedClasses.length;
+    if (itemsPerPage === 'ALL' || numItems === 0) {
+        return { currentTableData: sortedClasses, totalPages: 1 };
+    }
+    
+    const totalPagesCalc = Math.ceil(numItems / itemsPerPage);
+    const validCurrentPage = Math.max(1, Math.min(currentPage, totalPagesCalc));
+
+    const start = (validCurrentPage - 1) * itemsPerPage;
+    const end = start + itemsPerPage;
+    
+    return { currentTableData: sortedClasses.slice(start, end), totalPages: totalPagesCalc };
+  }, [sortedClasses, currentPage, itemsPerPage]);
+  
+  const paginationNumbers = useMemo(() => {
+    if (totalPages <= 1) {
+        return [];
+    }
+    const pageNumbers = [];
+    const maxVisiblePages = 5;
+
+    if (totalPages <= maxVisiblePages) {
+        for (let i = 1; i <= totalPages; i++) {
+            pageNumbers.push(i);
+        }
+    } else {
+        let startPage: number;
+        let endPage: number;
+
+        if (currentPage <= 3) {
+            startPage = 1;
+            endPage = maxVisiblePages;
+        } else if (currentPage + 2 >= totalPages) {
+            startPage = totalPages - maxVisiblePages + 1;
+            endPage = totalPages;
+        } else {
+            startPage = currentPage - 2;
+            endPage = currentPage + 2;
+        }
+        
+        for (let i = startPage; i <= endPage; i++) {
+            pageNumbers.push(i);
+        }
+    }
+    return pageNumbers;
+  }, [totalPages, currentPage]);
 
   useEffect(() => {
     if (headerCheckboxRef.current) {
@@ -232,7 +286,7 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
               </tr>
             </thead>
             <tbody className="bg-transparent divide-y divide-gray-700/50">
-              {sortedClasses.map((classItem) => (
+              {currentTableData.map((classItem) => (
                 <React.Fragment key={classItem.id}>
                   <tr 
                     className={`hover:bg-gray-800/40 transition-colors cursor-pointer ${expandedClassId === classItem.id ? 'bg-gray-800/60' : ''}`}
@@ -291,6 +345,85 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
               ))}
             </tbody>
           </table>
+        </div>
+        <div className="flex justify-between items-center pt-4 mt-4 border-t border-gray-700/50">
+            <div className="flex items-center gap-2 text-sm">
+            <label htmlFor="itemsPerPageSelect" className="text-gray-400">페이지당 표시 개수:</label>
+            <select
+                id="itemsPerPageSelect"
+                value={itemsPerPage}
+                onChange={e => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                className="bg-gray-700 border border-gray-600 rounded-md py-1 pl-2 pr-8 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+                aria-label="페이지당 표시 개수"
+            >
+                <option value={10}>10</option>
+                <option value={20}>20</option>
+                <option value={30}>30</option>
+                <option value={50}>50</option>
+                <option value="ALL">All</option>
+            </select>
+            </div>
+
+            <div className="flex items-center gap-1 text-sm">
+            <button
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1 || totalPages === 0}
+                className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="첫 페이지로 이동"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" />
+                </svg>
+            </button>
+            <button
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1 || totalPages === 0}
+                className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="이전 페이지로 이동"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+            </button>
+            {paginationNumbers.map(pageNumber => (
+                <button
+                key={pageNumber}
+                onClick={() => setCurrentPage(pageNumber)}
+                className={`px-3.5 py-1.5 rounded-md text-sm font-medium transition-colors w-9 ${
+                    currentPage === pageNumber
+                    ? 'bg-[#E5A823] text-gray-900'
+                    : 'bg-gray-700 hover:bg-gray-600 text-white'
+                }`}
+                aria-current={currentPage === pageNumber ? 'page' : undefined}
+                >
+                {pageNumber}
+                </button>
+            ))}
+            <button
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="다음 페이지로 이동"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                </svg>
+            </button>
+            <button
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage === totalPages || totalPages === 0}
+                className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:bg-gray-800 disabled:text-gray-500 disabled:cursor-not-allowed text-white transition-colors"
+                aria-label="마지막 페이지로 이동"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" />
+                </svg>
+            </button>
+            </div>
+
+            <div className="text-sm text-gray-400 w-40 text-right">
+            총 {sortedClasses.length}개 중 {`페이지 ${totalPages > 0 ? currentPage : 0} / ${totalPages}`}
+            </div>
         </div>
       </Card>
       <ClassModal 

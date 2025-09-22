@@ -35,7 +35,7 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
   const [pdfLoadingId, setPdfLoadingId] = useState<number | null>(null);
   const pdfRef = useRef<HTMLDivElement>(null);
@@ -374,6 +374,7 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
               className="bg-gray-700 border border-gray-600 rounded-md py-1 pl-2 pr-8 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
               aria-label="페이지당 표시 개수"
             >
+              <option value={10}>10</option>
               <option value={20}>20</option>
               <option value={30}>30</option>
               <option value={40}>40</option>

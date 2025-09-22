@@ -28,8 +28,8 @@ const createInitialData = () => {
       { id: 5, name: '최직원', position: '직원', role: 'operator', hireDate: '2025-01-01', phone: '010-4444-4444', email: 'choi@hera.math', resignationDate: '' },
     ];
 
-    // 2. 학생 데이터 생성 (200명)
-    const students: Student[] = Array.from({ length: 200 }, (_, i) => {
+    // 2. 학생 데이터 생성 (320명)
+    const students: Student[] = Array.from({ length: 320 }, (_, i) => {
         const id = i + 1;
         const gender = Math.random() > 0.5 ? '남' : '여';
         const name = getRandom(SURNAMES) + (gender === '남' ? getRandom(GIVEN_NAMES_MALE) : getRandom(GIVEN_NAMES_FEMALE));
@@ -39,11 +39,11 @@ const createInitialData = () => {
         else grade = `중${gradeNum-3}`;
 
         let status: StudentStatus;
-        if (i < 80) { // 퇴원생 80명
+        if (i < 100) { // 퇴원생 100명
             status = StudentStatus.WITHDRAWN;
-        } else if (i < 86) { // 상담/대기 6명
+        } else if (i < 115) { // 상담/대기 15명
             status = StudentStatus.CONSULTING;
-        } else { // 재원생 114명
+        } else { // 재원생 205명
             status = StudentStatus.ENROLLED;
         }
         
@@ -311,6 +311,7 @@ const createInitialData = () => {
 
     // 7. 상담 기록 생성
     const COUNSELING_TOPICS = ['2학기 내신 대비 학습 전략 상담', '수학 학습에 대한 흥미 저하 문제 논의', '심화 문제 풀이 능력 향상 방안 상담', '겨울방학 특강 프로그램 문의', '오답 노트 작성 및 활용법 지도', '진로 및 입시 관련 상담', '최근 테스트 결과 분석 및 피드백', '교우 관계 및 학교 생활 관련 상담'];
+    const COUNSELING_TYPES = ['정기상담', '학습상담', '진로상담', '내신대비', '신규상담'];
     const counselings: Counseling[] = [];
     let counselingId = 1;
     students.filter(s => s.status === StudentStatus.ENROLLED || s.status === StudentStatus.WITHDRAWN).slice(0, 70).forEach(student => {
@@ -322,13 +323,14 @@ const createInitialData = () => {
                 parentName: student.motherName,
                 teacherId: student.teacherId,
                 content: getRandom(COUNSELING_TOPICS),
-                followUp: '주간 테스트 결과 확인 후 추가 피드백 예정.'
+                followUp: '주간 테스트 결과 확인 후 추가 피드백 예정.',
+                type: getRandom(COUNSELING_TYPES),
             });
         }
     });
 
     // 8. 기타 데이터
-    const tuitions: Tuition[] = students.filter(s => s.status === StudentStatus.ENROLLED).slice(0, 20).map((s, i) => ({ id: i + 1, studentId: s.id, course: s.grade.startsWith('고') ? '고등' : '중등', plan: '주3회', baseFee: 450000, siblingDiscount: false, totalFee: 450000, cashReceiptPhone: s.motherPhone, paymentMethod: '카드', paymentStatus: i % 5 === 0 ? '미결제' : '결제완료' }));
+    const initialTuitions: Tuition[] = [];
     const academyEvents: AcademyEvent[] = [
         { id: 1, title: '여름방학 특강 시작', type: '학사', startDate: '2025-07-21', endDate: '2025-08-15', relatedClassIds: [], notes: '전 학년 대상'},
         { id: 2, title: '전국 모의고사', type: '시험', startDate: '2025-09-04', endDate: '2025-09-04', relatedClassIds: classes.filter(c => c.name.startsWith('고등')).map(c => c.id), notes: '고등부 대상'},
@@ -337,7 +339,7 @@ const createInitialData = () => {
         { id: 1, title: '2학기 교육과정 회의', date: '2025-07-20', attendeeIds: [1, 2, 3, 4], agenda: '2학기 내신 대비 교재 선정', content: '교재 후보 3종 비교 분석', decisions: 'A교재 기본, B교재 심화용으로 최종 선정', actionItems: [{ task: '교재 주문', 담당자Id: 1, dueDate: '2025-07-25'}] }
     ];
 
-    return { initialTeachers: teachers, initialStudents: students, initialClasses: classes, initialLessonRecords: lessonRecords, initialMonthlyReports: monthlyReports, initialTuitions: tuitions, initialCounselings: counselings, initialAcademyEvents: academyEvents, initialMeetingNotes: meetingNotes };
+    return { initialTeachers: teachers, initialStudents: students, initialClasses: classes, initialLessonRecords: lessonRecords, initialMonthlyReports: monthlyReports, initialTuitions: initialTuitions, initialCounselings: counselings, initialAcademyEvents: academyEvents, initialMeetingNotes: meetingNotes };
 }
 
 const {

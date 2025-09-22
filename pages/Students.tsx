@@ -48,7 +48,7 @@ const Students: React.FC<StudentsPageProps> = ({
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(20);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
 
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
@@ -341,7 +341,24 @@ const Students: React.FC<StudentsPageProps> = ({
           </div>
       </div>
 
-      <div className="flex gap-6 items-start">
+      <div className="flex flex-col gap-6">
+        <div>
+            {viewingStudent ? (
+                <StudentDetailView
+                  student={viewingStudent}
+                  onClose={() => setViewingStudent(null)}
+                  onEdit={handleEditStudent}
+                  monthlyReports={monthlyReports}
+                  tuitions={tuitions}
+                  counselings={counselings}
+                  teacherMap={teacherMap}
+                />
+            ) : (
+                <Card className="flex items-center justify-center h-24">
+                    <p className="text-gray-500">학생 목록에서 학생을 선택하여 상세 정보를 확인하세요.</p>
+                </Card>
+            )}
+        </div>
         <div className="flex-1">
             <Card>
                 <div className="overflow-x-auto">
@@ -416,6 +433,7 @@ const Students: React.FC<StudentsPageProps> = ({
                       className="bg-gray-700 border border-gray-600 rounded-md py-1 pl-2 pr-8 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
                       aria-label="페이지당 표시 인원"
                     >
+                      <option value={10}>10</option>
                       <option value={20}>20</option>
                       <option value={30}>30</option>
                       <option value={40}>40</option>
@@ -487,24 +505,6 @@ const Students: React.FC<StudentsPageProps> = ({
                   </div>
                 </div>
             </Card>
-        </div>
-
-        <div className="w-full lg:w-1/3 sticky top-8">
-            {viewingStudent ? (
-                <StudentDetailView
-                  student={viewingStudent}
-                  onClose={() => setViewingStudent(null)}
-                  onEdit={handleEditStudent}
-                  monthlyReports={monthlyReports}
-                  tuitions={tuitions}
-                  counselings={counselings}
-                  teacherMap={teacherMap}
-                />
-            ) : (
-                <Card className="flex items-center justify-center h-48">
-                    <p className="text-gray-500">학생을 선택하여 상세 정보를 확인하세요.</p>
-                </Card>
-            )}
         </div>
       </div>
        <StudentModal 

@@ -59,9 +59,25 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
     }, 1500); // Close modal after showing success message
   };
 
-  const receiverPhone = student.sendSmsToBoth && student.fatherPhone 
-    ? `${student.motherPhone}(모), ${student.fatherPhone}(부)`
-    : student.motherPhone;
+  const getReceiverInfo = () => {
+    if (!student) return { name: '학부모님', phones: null };
+    
+    const phones: string[] = [];
+    if (student.motherPhone) phones.push(`${student.motherPhone}(모)`);
+    if (student.sendSmsToBoth && student.fatherPhone) {
+        // Avoid duplicates if numbers are the same
+        if (!student.motherPhone || student.fatherPhone !== student.motherPhone) {
+            phones.push(`${student.fatherPhone}(부)`);
+        }
+    }
+    
+    return {
+        name: `${student.motherName} 학부모님`,
+        phones: phones.length > 0 ? phones.join(', ') : null,
+    };
+  };
+
+  const { name: receiverName, phones: receiverPhones } = getReceiverInfo();
 
   const renderButtons = () => {
     switch(sendStep) {
@@ -69,7 +85,7 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
             return (
                 <>
                     <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-white font-medium">취소</button>
-                    <button type="button" onClick={handleInitialSend} className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors text-white font-bold">알림톡 발송</button>
+                    <button type="button" onClick={handleInitialSend} disabled={!receiverPhones} className="py-2 px-4 rounded-lg bg-blue-600 hover:bg-blue-500 transition-colors text-white font-bold disabled:bg-gray-600 disabled:cursor-not-allowed">알림톡 발송</button>
                 </>
             );
         case 'sending_kakao':
@@ -79,7 +95,7 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
                 {sendStep === 'sending_kakao' ? '발송 중...' : '문자 발송 중...'}
             </button>;
         case 'failed_kakao':
-            return (
+             return (
                  <>
                     <button type="button" onClick={onClose} className="py-2 px-4 rounded-lg bg-gray-700 hover:bg-gray-600 transition-colors text-white font-medium">취소</button>
                     <button type="button" onClick={handleSmsSend} className="py-2 px-4 rounded-lg bg-green-600 hover:bg-green-500 transition-colors text-white font-bold">일반 문자로 발송</button>
@@ -97,7 +113,7 @@ const ReportPreviewModal: React.FC<ReportPreviewModalProps> = ({ isOpen, onClose
           <div className="space-y-4">
             <div className="bg-gray-800/50 p-3 rounded-lg text-sm">
                 <p className="text-gray-400">받는 사람:</p>
-                <p className="text-white font-semibold">{student.motherName} 학부모님 ({receiverPhone})</p>
+                <p className="text-white font-semibold">{receiverName} ({receiverPhones || '연락처 없음'})</p>
             </div>
             
             <div className="p-4 border border-gray-700/50 rounded-lg bg-gray-900/30">
