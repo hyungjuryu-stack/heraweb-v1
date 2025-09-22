@@ -294,7 +294,62 @@ const createInitialData = () => {
         });
     });
 
-    // 6. 월간 리포트 생성 (재원 기간 내 매월)
+    // 6. 수강료 기록 생성 (최근 3개월)
+    const tuitions: Tuition[] = [];
+    const MIDDLE_SCHOOL_FEE = 450000;
+    const HIGH_SCHOOL_FEE = 550000;
+    const BASE_SESSIONS = 8;
+    const SIBLING_DISCOUNT_RATE = 0.1;
+    const enrolledStudentIds = new Set(students.filter(s => s.status === StudentStatus.ENROLLED).map(s => s.id));
+
+    students.forEach(student => {
+        const studentEnrollmentDate = new Date(student.enrollmentDate);
+
+        for (let i = 0; i < 3; i++) {
+            const d = new Date(SIM_END_DATE);
+            d.setMonth(d.getMonth() - i);
+            const firstDayOfMonth = new Date(d.getFullYear(), d.getMonth(), 1);
+            
+            if (firstDayOfMonth < studentEnrollmentDate) continue;
+            if(student.withdrawalDate && new Date(student.withdrawalDate) < firstDayOfMonth) continue;
+
+            const monthStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const startDate = firstDayOfMonth.toISOString().split('T')[0];
+            const endDate = new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0];
+
+            const hasEnrolledSibling = student.siblings.some(siblingId => enrolledStudentIds.has(siblingId));
+            const shouldApplyDiscount = hasEnrolledSibling && student.id > (student.siblings[0] || 0);
+            const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
+            
+            const baseFee = student.grade.startsWith('고') ? HIGH_SCHOOL_FEE : MIDDLE_SCHOOL_FEE;
+            const perSessionFee = baseFee / BASE_SESSIONS;
+            const subtotal = baseFee;
+            const otherDiscount = Math.random() > 0.95 ? 10000 : 0;
+            const siblingDiscountAmount = Math.round(subtotal * siblingDiscountRate);
+            const finalFee = subtotal - siblingDiscountAmount - otherDiscount;
+
+            tuitions.push({
+                id: `${student.id}-${monthStr}`,
+                studentId: student.id,
+                month: monthStr,
+                calculationPeriodStart: startDate,
+                calculationPeriodEnd: endDate,
+                baseFee,
+                baseSessions: BASE_SESSIONS,
+                perSessionFee: Math.round(perSessionFee),
+                scheduledSessions: BASE_SESSIONS,
+                siblingDiscountRate,
+                siblingDiscountAmount,
+                otherDiscount,
+                finalFee: Math.round(finalFee),
+                paymentStatus: Math.random() > 0.2 ? '결제완료' : '미결제',
+                notes: otherDiscount > 0 ? '이벤트 할인' : (shouldApplyDiscount ? '형제 할인 적용' : ''),
+            });
+        }
+    });
+    const initialTuitions = tuitions;
+
+    // 7. 월간 리포트 생성 (재원 기간 내 매월)
     const monthlyReports: MonthlyReport[] = [];
     let reportId = 1;
     students.forEach(student => {
@@ -319,13 +374,14 @@ const createInitialData = () => {
         }
     });
 
-    // 7. 상담 기록 생성
+    // 8. 상담 기록 생성
     const COUNSELING_TOPICS = ['2학기 내신 대비 학습 전략 상담', '수학 학습에 대한 흥미 저하 문제 논의', '심화 문제 풀이 능력 향상 방안 상담', '오답 노트 작성법 지도', '방학 특강 수강 문의'];
     const COUNSELING_TYPES = ['정기상담', '학습상담', '진로상담', '내신대비', '신규상담'];
     const counselings: Counseling[] = [];
     let counselingId = 1;
-    students.slice(0, 100).forEach(student => {
-        if (student.teacherId) {
+    students.forEach(student => {
+        // Randomly assign counseling records to about 50% of students
+        if (student.teacherId && Math.random() > 0.5) {
             // Generate 1 to 3 counseling records per student
             for (let i = 0; i < getRandomInt(1, 3); i++) {
                 counselings.push({
@@ -342,8 +398,7 @@ const createInitialData = () => {
         }
     });
 
-    // 8. 기타 데이터
-    const initialTuitions: Tuition[] = []; // Tuition data will be generated on the page
+    // 9. 기타 데이터
     const academyEvents: AcademyEvent[] = [
         { id: 1, title: '여름방학 특강 시작', type: '학사', startDate: '2025-07-21', endDate: '2025-08-15', relatedClassIds: [], notes: '전 학년 대상'},
         { id: 2, title: '전국 모의고사', type: '시험', startDate: '2025-09-04', endDate: '2025-09-04', relatedClassIds: classes.filter(c => c.name.startsWith('고등')).map(c => c.id), notes: '고등부 대상'},

@@ -240,13 +240,9 @@ const Students: React.FC<StudentsPageProps> = ({
   };
   
   const handleSaveAnalysis = (studentId: number, analysis: TrendAnalysis) => {
-    const studentToUpdate = students.find(s => s.id === studentId);
-    if (studentToUpdate) {
-        const updatedStudent = { ...studentToUpdate, trendAnalysis: analysis };
-        setStudents(prev => prev.map(s => (s.id === studentId ? updatedStudent : s)));
-        if (viewingStudent?.id === studentId) {
-            setViewingStudent(updatedStudent);
-        }
+    setStudents(prev => prev.map(s => (s.id === studentId ? { ...s, trendAnalysis: analysis } : s)));
+    if (viewingStudent?.id === studentId) {
+        setViewingStudent(prev => prev ? { ...prev, trendAnalysis: analysis } : null);
     }
   };
 
