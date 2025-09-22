@@ -26,8 +26,8 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
     testScore2: null,
     testScore3: null,
     homework: 'A',
-    // Fix: Type '"보통"' is not assignable to type 'HomeworkGrade'.
     attitude: 'B',
+    selfDirectedLearning: 'B',
     notes: '',
     requested_test: '',
     main_textbook: '',
@@ -102,7 +102,7 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
           <h3 id="attendance-modal-title" className="text-lg font-bold text-[#E5A823]">{studentName} - {date}</h3>
         </div>
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          <div className="grid grid-cols-3 gap-2">
+          <div className="grid grid-cols-2 gap-2">
             <div>
               <label htmlFor="attendance-status" className="block text-xs font-medium text-gray-300 mb-1">출결</label>
               <select id="attendance-status" value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}>
@@ -117,9 +117,15 @@ const AttendanceDetailModal: React.FC<AttendanceDetailModalProps> = ({
                   {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
-            <div>
+             <div>
               <label htmlFor="homework" className="block text-xs font-medium text-gray-300 mb-1">과제</label>
               <select id="homework" value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>
+                  {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
+              </select>
+            </div>
+             <div>
+              <label htmlFor="selfDirectedLearning" className="block text-xs font-medium text-gray-300 mb-1">자기주도</label>
+              <select id="selfDirectedLearning" value={formData.selfDirectedLearning} onChange={e => handleChange('selfDirectedLearning', e.target.value as HomeworkGrade)} className={commonSelectClass}>
                   {homeworkGrades.map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>

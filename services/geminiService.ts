@@ -107,13 +107,13 @@ export const generateTest = async (grade: string, unit: string, numQuestions: nu
 };
 
 
-export const generateStudentReview = async (student: Student & { attitudeRate: number }, studentRecords: LessonRecord[], teacherName: string | null, trendAnalysis: TrendAnalysis | null): Promise<string> => {
+export const generateStudentReview = async (student: Student & { attitudeRate: number, selfDirectedLearningRate: number }, studentRecords: LessonRecord[], teacherName: string | null, trendAnalysis: TrendAnalysis | null): Promise<string> => {
   try {
     const recordsSummary = studentRecords.length > 0
       ? `해당 기간의 전체 수업 기록:\n` + studentRecords.map(r => {
           const tests = [r.testScore1, r.testScore2, r.testScore3].filter(Boolean).join(', ');
           const textbooks = [r.main_textbook, r.supplementary_textbook, r.reinforcement_textbook].filter(Boolean).join(' / ');
-          return `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework})`
+          return `- ${r.date}: 출석(${r.attendance}), 태도(${r.attitude}), 과제(${r.homework}), 자기주도(${r.selfDirectedLearning})`
             + (tests ? `, 테스트(${tests})` : '')
             + (textbooks ? `, 교재(${textbooks})` : '')
             + (r.notes ? `, 노트: ${r.notes}` : '')
@@ -145,6 +145,7 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
       - 출석률: ${student.attendanceRate}%
       - 과제 제출률: ${student.homeworkRate}%
       - 수업 태도 점수: ${student.attitudeRate}점
+      - 자기주도 학습 점수: ${student.selfDirectedLearningRate}점
 
       **참고 자료 (기간 내 상세 기록):**
       - 진단 테스트 총평: ${student.diagnosticTestNotes || '없음'}
@@ -157,7 +158,7 @@ export const generateStudentReview = async (student: Student & { attitudeRate: n
       
       **1. 학습 태도 및 성취도 (4-5문장):**
           - 따뜻한 인사말로 시작하여, 한 달간 학생의 전반적인 학습 태도와 분위기를 이야기하듯 풀어주세요.
-          - 정량 데이터와 수업 기록을 엮어 학생의 **'성장 스토리'**를 들려주세요. 예를 들어, "이번 달 ${student.name} 학생은 꾸준한 성실함으로 교과 과정을 잘 따라왔습니다. 특히 월초에 다소 어려워했던 '함수' 단원에서, 월말 평가 때는 모든 문제를 맞추며 눈에 띄는 성장을 이루어냈습니다." 와 같이 **시간의 흐름에 따른 변화**를 구체적으로 보여주세요.
+          - 정량 데이터와 수업 기록을 엮어 학생의 **'성장 스토리'**를 들려주세요. 특히, **자기주도 학습 점수**가 높다면 스스로 문제를 해결하려는 의지가 강하다는 점을, 낮다면 동기 부여가 필요하다는 점을 언급해주세요. 예를 들어, "이번 달 ${student.name} 학생은 꾸준한 성실함으로 교과 과정을 잘 따라왔습니다. 특히 월초에 다소 어려워했던 '함수' 단원에서, 월말 평가 때는 모든 문제를 맞추며 눈에 띄는 성장을 이루어냈습니다." 와 같이 **시간의 흐름에 따른 변화**를 구체적으로 보여주세요.
           - 수업 기록을 인용할 때, '9월 15일 수업에서는 오답 노트를 꼼꼼하게 정리해오는 모습이 참 인상적이었습니다.' 와 같이 선생님이 직접 관찰한 듯한 느낌을 살려주세요.
 
       **2. 강점과 성장할 부분 (4-5문장):**
@@ -196,7 +197,7 @@ export const generateTrendAnalysis = async (student: Student, reports: MonthlyRe
         const reportSummary = reports
             .sort((a, b) => a.period.localeCompare(b.period)) // Sort reports chronologically
             .map(r => 
-                `- ${r.period}: 평균 점수(${r.avgScore}점), 출석률(${r.attendanceRate}%), 과제 수행률(${r.homeworkRate}%), 수업 태도(${r.attitudeRate}점)`
+                `- ${r.period}: 평균 점수(${r.avgScore}점), 출석률(${r.attendanceRate}%), 과제 수행률(${r.homeworkRate}%), 수업 태도(${r.attitudeRate}점), 자기주도(${r.selfDirectedLearningRate}점)`
             ).join('\n');
 
         const prompt = `

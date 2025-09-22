@@ -100,12 +100,14 @@ const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings
     
     useEffect(() => {
         if (headerCheckboxRef.current) {
-            const numSelected = selectedIds.length;
-            const numTotalItems = filteredAndSortedCounselings.length;
-            headerCheckboxRef.current.checked = numSelected === numTotalItems && numTotalItems > 0;
-            headerCheckboxRef.current.indeterminate = numSelected > 0 && numSelected < numTotalItems;
+            const pageIds = currentTableData.map(c => c.id);
+            const allOnPageSelected = pageIds.length > 0 && pageIds.every(id => selectedIds.includes(id));
+            const someOnPageSelected = pageIds.some(id => selectedIds.includes(id));
+
+            headerCheckboxRef.current.checked = allOnPageSelected;
+            headerCheckboxRef.current.indeterminate = !allOnPageSelected && someOnPageSelected;
         }
-    }, [selectedIds, filteredAndSortedCounselings]);
+    }, [selectedIds, currentTableData]);
 
     const requestSort = (key: string) => {
         let direction: 'ascending' | 'descending' = 'ascending';
@@ -121,10 +123,11 @@ const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings
     };
 
     const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const pageIds = currentTableData.map(c => c.id);
         if (e.target.checked) {
-            setSelectedIds(filteredAndSortedCounselings.map(c => c.id));
+            setSelectedIds(prev => [...new Set([...prev, ...pageIds])]);
         } else {
-            setSelectedIds([]);
+            setSelectedIds(prev => prev.filter(id => !pageIds.includes(id)));
         }
     };
 
@@ -165,6 +168,14 @@ const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings
         }
         handleCloseModal();
     };
+
+    const handleSelectAllClick = () => {
+        setSelectedIds(filteredAndSortedCounselings.map(c => c.id));
+    };
+
+    const handleDeselectAllClick = () => {
+        setSelectedIds([]);
+    };
     
     const headers: { key: string; label: string }[] = [
         { key: 'date', label: '상담일' },
@@ -189,6 +200,7 @@ const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings
             
              <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
                 <div className="flex flex-col sm:flex-row items-center gap-4 w-full md:w-auto">
+                    <span className="text-white font-medium text-sm whitespace-nowrap">{selectedIds.length}개 선택됨</span>
                     <div className="relative w-full sm:w-auto">
                          <input
                             type="text"
@@ -220,12 +232,22 @@ const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings
                     </div>
                 </div>
                  <div className="flex items-center gap-2 flex-shrink-0">
-                    <span className="text-white font-medium text-sm mr-2">{`${selectedIds.length} / ${filteredAndSortedCounselings.length}개 선택됨`}</span>
+                    <button 
+                        onClick={handleSelectAllClick}
+                        className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors text-sm">
+                        전체 선택
+                    </button>
+                    <button 
+                        onClick={handleDeselectAllClick}
+                        disabled={selectedIds.length === 0}
+                        className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-sm">
+                        선택 취소
+                    </button>
                     <button 
                         onClick={handleDeleteSelected}
                         disabled={selectedIds.length === 0}
                         className="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed text-sm">
-                        선택 삭제
+                        선택 항목 삭제
                     </button>
                 </div>
             </div>

@@ -66,8 +66,8 @@ const ReportPDF: React.FC<ReportPDFProps> = ({ report, student, teacherName }) =
     },
     statsGrid: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(4, 1fr)',
-        gap: '15px',
+        gridTemplateColumns: 'repeat(5, 1fr)',
+        gap: '10px',
         textAlign: 'center' as const,
         marginTop: '20px',
     },
@@ -77,12 +77,12 @@ const ReportPDF: React.FC<ReportPDFProps> = ({ report, student, teacherName }) =
         borderRadius: '8px',
     },
     statLabel: {
-        fontSize: '14px',
+        fontSize: '13px',
         color: '#555',
         marginBottom: '5px',
     },
     statValue: {
-        fontSize: '24px',
+        fontSize: '22px',
         fontWeight: 'bold' as const,
         color: '#E5A823',
     },
@@ -110,6 +110,7 @@ const ReportPDF: React.FC<ReportPDFProps> = ({ report, student, teacherName }) =
   const chartData = [
     { subject: '평균 점수', value: report.avgScore, fullMark: 100 },
     { subject: '수업 태도', value: report.attitudeRate, fullMark: 100 },
+    { subject: '자기주도', value: report.selfDirectedLearningRate, fullMark: 100 },
     { subject: '출석률', value: report.attendanceRate, fullMark: 100 },
     { subject: '과제 수행률', value: report.homeworkRate, fullMark: 100 },
   ];
@@ -152,6 +153,10 @@ const ReportPDF: React.FC<ReportPDFProps> = ({ report, student, teacherName }) =
              <div style={styles.statBox}>
                 <p style={styles.statLabel}>수업 태도</p>
                 <p style={styles.statValue}>{report.attitudeRate}점</p>
+            </div>
+             <div style={styles.statBox}>
+                <p style={styles.statLabel}>자기주도</p>
+                <p style={styles.statValue}>{report.selfDirectedLearningRate}점</p>
             </div>
             <div style={styles.statBox}>
                 <p style={styles.statLabel}>출석률</p>

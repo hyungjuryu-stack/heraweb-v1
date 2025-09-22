@@ -42,6 +42,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
         avgScore: 0,
         homeworkRate: 0,
         attitudeRate: 0,
+        selfDirectedLearningRate: 0,
         counselingSummary: '',
         sentDate: new Date().toISOString().split('T')[0],
         teacherId: 0,
@@ -144,6 +145,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                     avgScore: 0,
                     homeworkRate: 0,
                     attitudeRate: 0,
+                    selfDirectedLearningRate: 0,
                     counselingSummary: '',
                     sentDate: new Date().toISOString().split('T')[0],
                     teacherId: 0,
@@ -238,10 +240,15 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
             const attitudeScoreMap: Record<HomeworkGrade, number> = { 'A': 100, 'B': 85, 'C': 70, 'D': 60, 'F': 50 };
             const totalAttitudeScore = records.reduce((sum, r) => sum + (attitudeScoreMap[r.attitude] || 85), 0);
             const attitudeRate = Math.round(totalAttitudeScore / records.length);
+
+            // Calculate self-directed learning
+            const selfDirectedLearningScoreMap: Record<HomeworkGrade, number> = { A: 100, B: 90, C: 80, D: 70, F: 60 };
+            const totalSelfDirectedLearningScore = records.reduce((sum, r) => sum + (selfDirectedLearningScoreMap[r.selfDirectedLearning] || 80), 0);
+            const selfDirectedLearningRate = Math.round(totalSelfDirectedLearningScore / records.length);
             
-            setFormData(prev => ({ ...prev, attendanceRate, homeworkRate, avgScore, attitudeRate }));
+            setFormData(prev => ({ ...prev, attendanceRate, homeworkRate, avgScore, attitudeRate, selfDirectedLearningRate }));
         } else {
-            setFormData(prev => ({ ...prev, attendanceRate: 0, homeworkRate: 0, avgScore: 0, attitudeRate: 0 }));
+            setFormData(prev => ({ ...prev, attendanceRate: 0, homeworkRate: 0, avgScore: 0, attitudeRate: 0, selfDirectedLearningRate: 0 }));
         }
 
     }, [selectedStudent, periodConfig, periodType, lessonRecords]);
@@ -282,6 +289,7 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
     const chartData = useMemo(() => [
       { subject: '평균 점수', value: formData.avgScore, fullMark: 100 },
       { subject: '수업 태도', value: formData.attitudeRate, fullMark: 100 },
+      { subject: '자기주도', value: formData.selfDirectedLearningRate, fullMark: 100 },
       { subject: '출석률', value: formData.attendanceRate, fullMark: 100 },
       { subject: '과제 수행률', value: formData.homeworkRate, fullMark: 100 },
     ], [formData]);
@@ -377,6 +385,10 @@ const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSave, repo
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">수업 태도</p>
                                             <p className="text-2xl font-bold text-white">{formData.attitudeRate}점</p>
+                                        </div>
+                                        <div className="text-center md:text-left">
+                                            <p className="text-sm text-gray-400">자기주도 학습</p>
+                                            <p className="text-2xl font-bold text-white">{formData.selfDirectedLearningRate}점</p>
                                         </div>
                                         <div className="text-center md:text-left">
                                             <p className="text-sm text-gray-400">출석률</p>

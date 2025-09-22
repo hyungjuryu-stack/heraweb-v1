@@ -13,7 +13,7 @@ const homeworkGrades: HomeworkGrade[] = ['A', 'B', 'C', 'D', 'F'];
 
 const StudentInfoCell: React.FC<{ student: Student, index: number }> = ({ student, index }) => {
     const labels = [
-        "출석/태도/과제",
+        "출석/태도/과제/자기주도",
         "테스트 (1/2/3)",
         "본교재",
         "부교재",
@@ -50,6 +50,7 @@ const AttendanceRecordView: React.FC<{ record?: LessonRecord }> = ({ record }) =
             <span>{record?.attendance || '-'}</span>
             <span>{record?.attitude || '-'}</span>
             <span>{record?.homework || '-'}</span>
+            <span>{record?.selfDirectedLearning || '-'}</span>
         </div>,
         <div className="flex justify-center items-center gap-2 px-1 truncate text-[11px] w-full">
             <span>{record?.testScore1 || '-'}</span>/
@@ -87,6 +88,7 @@ const AttendanceRecordEdit: React.FC<{
         testScore3: record?.testScore3 || null,
         homework: record?.homework || 'A',
         attitude: record?.attitude || 'B',
+        selfDirectedLearning: record?.selfDirectedLearning || 'B',
         notes: record?.notes || '',
         requested_test: record?.requested_test || '',
         main_textbook: record?.main_textbook || '',
@@ -103,10 +105,11 @@ const AttendanceRecordEdit: React.FC<{
 
     return (
         <div className="absolute inset-0 bg-[#0d211c] p-1 z-10 border-2 border-yellow-500 rounded-md text-xs flex flex-col space-y-1">
-            <div className="grid grid-cols-3 gap-1">
+            <div className="grid grid-cols-4 gap-1">
                 <select value={formData.attendance} onChange={e => handleChange('attendance', e.target.value)} className={commonSelectClass}><option>출석</option><option>지각</option><option>결석</option></select>
                 <select value={formData.attitude} onChange={e => handleChange('attitude', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
                 <select value={formData.homework} onChange={e => handleChange('homework', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
+                <select value={formData.selfDirectedLearning} onChange={e => handleChange('selfDirectedLearning', e.target.value as HomeworkGrade)} className={commonSelectClass}>{homeworkGrades.map(g => <option key={g}>{g}</option>)}</select>
             </div>
             <div className="grid grid-cols-3 gap-1">
                 <input type="text" placeholder="점수1" value={formData.testScore1 ?? ''} onChange={e => handleChange('testScore1', e.target.value === '' ? null : e.target.value)} className={commonInputClass} />
@@ -343,6 +346,7 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
                      record.attendance === '결석' ||
                      ['C', 'D', 'F'].includes(record.attitude) ||
                      poorHomeworkGrades.includes(record.homework) ||
+                     poorHomeworkGrades.includes(record.selfDirectedLearning) ||
                      scores.length > 0;
           });
           triggers[dateString] = hasTrigger;

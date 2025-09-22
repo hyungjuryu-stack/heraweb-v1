@@ -260,9 +260,9 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
       if (!record) return false;
       const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
       return record.attendance !== '출석' ||
-             // Fix: This comparison appears to be unintentional because the types 'HomeworkGrade' and '"안좋음"' have no overlap.
              poorHomeworkGrades.includes(record.attitude) ||
              poorHomeworkGrades.includes(record.homework) ||
+             poorHomeworkGrades.includes(record.selfDirectedLearning) ||
              scores.length > 0;
     };
     
@@ -299,6 +299,7 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
         { key: 'attendance', label: '출결' },
         { key: 'attitude', label: '태도' },
         { key: 'homework', label: '과제' },
+        { key: 'selfDirectedLearning', label: '자기주도' },
         { key: 'testScore1', label: '테스트(1/2/3)' },
         { key: 'main_textbook', label: '본교재' },
         { key: 'supplementary_textbook', label: '부교재' },
@@ -412,6 +413,7 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                             <td className="px-6 py-4 whitespace-nowrap text-sm"><AttendanceBadge status={record.attendance} /></td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.attitude}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.homework}</td>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{record.selfDirectedLearning}</td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 truncate max-w-[10rem]" title={[record.testScore1, record.testScore2, record.testScore3].filter(Boolean).join(' / ')}>
                                 {[record.testScore1, record.testScore2, record.testScore3].filter(Boolean).join(' / ') || '-'}
                             </td>

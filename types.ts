@@ -71,6 +71,7 @@ export interface LessonRecord {
   testScore3: string | null;
   homework: HomeworkGrade;
   attitude: HomeworkGrade;
+  selfDirectedLearning: HomeworkGrade;
   notes: string;
   requested_test: string;
   main_textbook: string;
@@ -86,6 +87,7 @@ export interface MonthlyReport {
   avgScore: number;
   homeworkRate: number;
   attitudeRate: number;
+  selfDirectedLearningRate: number;
   counselingSummary: string;
   sentDate: string;
   teacherId: number;
