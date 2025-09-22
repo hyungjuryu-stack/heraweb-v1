@@ -6,6 +6,7 @@ import TrendAnalysisModal from './TrendAnalysisModal';
 
 interface StudentDetailViewProps {
   student: Student;
+  allStudents: Student[];
   onClose: () => void;
   onEdit: (student: Student) => void;
   monthlyReports: MonthlyReport[];
@@ -51,13 +52,11 @@ const TuitionList: React.FC<{ studentId: number, tuitions: Tuition[] }> = ({ stu
             {studentTuitions.map(tuition => (
                 <div key={tuition.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
                      <div className="flex justify-between items-center">
-                        {/* FIX: Replaced non-existent 'plan' and 'course' properties with 'month' from the Tuition type. */}
                         <span className="font-bold text-gray-200">{tuition.month} 수강료</span>
                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
                             tuition.paymentStatus === '결제완료' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
                         }`}>{tuition.paymentStatus}</span>
                     </div>
-                    {/* FIX: Replaced non-existent 'totalFee' property with 'finalFee' from the Tuition type. */}
                     <p className="text-xs text-gray-400 mt-1">금액: {tuition.finalFee.toLocaleString()}원</p>
                 </div>
             ))}
@@ -88,6 +87,7 @@ const CounselingList: React.FC<{ studentId: number, counselings: Counseling[], t
 
 const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   student,
+  allStudents,
   onClose,
   onEdit,
   monthlyReports,
@@ -98,6 +98,11 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis';
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
   const [isAnalysisModalOpen, setIsAnalysisModalOpen] = useState(false);
+
+  const siblingNames = student.siblings
+    .map(id => allStudents.find(s => s.id === id)?.name)
+    .filter(Boolean)
+    .join(', ');
 
   const TabButton = ({ icon, label, tab }: { icon: React.ReactNode; label: string; tab: DetailTab }) => {
     const isActive = activeDetailTab === tab;
@@ -129,6 +134,11 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
           <div>
             <h3 className="text-xl font-bold text-white">{student.name}</h3>
             <p className="text-sm text-gray-400">{student.grade} / {student.school}</p>
+            {siblingNames && (
+              <p className="text-xs text-yellow-400 mt-1">
+                형제/자매: {siblingNames}
+              </p>
+            )}
           </div>
           <div className="flex items-center gap-2">
             <button

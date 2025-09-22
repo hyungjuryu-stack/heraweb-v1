@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import type { Class, Student, Teacher } from '../types';
-import { ClockIcon, TeacherIcon, StudentsIcon } from '../components/Icons';
 
 interface DailyScheduleProps {
   classes: Class[];
@@ -85,54 +84,45 @@ const DailySchedule: React.FC<DailyScheduleProps> = ({ classes, students, teache
       </div>
       
       {scheduleForSelectedDate.length > 0 ? (
-        <div className="space-y-6">
-            {scheduleForSelectedDate.map(cls => (
-                <Card key={cls.id}>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Class Info */}
-                        <div className="md:col-span-1 md:border-r md:border-gray-700/50 pr-6">
-                            <h2 className="text-2xl font-bold text-[#E5A823] mb-3">{cls.name}</h2>
-                            <div className="space-y-3 text-gray-300">
-                                <div className="flex items-center">
-                                    <ClockIcon className="w-5 h-5 mr-3 text-gray-400" />
-                                    <span className="font-semibold">{cls.startTime} - {cls.endTime}</span>
-                                </div>
-                                <div className="flex items-center">
-                                    <TeacherIcon className="w-5 h-5 mr-3 text-gray-400" />
-                                    <span>{cls.teacherName}</span>
-                                </div>
-                                <div className="flex items-center">
-                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    <span>{cls.room}</span>
-                                </div>
-                                 <div className="flex items-center">
-                                    <StudentsIcon className="w-5 h-5 mr-3 text-gray-400" />
-                                    <span>{cls.students.length}명</span>
-                                </div>
+        <Card>
+            <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-700">
+                <thead className="bg-gray-800/50">
+                    <tr>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">시간</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">반 이름</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">강사</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">강의실</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider">인원</th>
+                    <th scope="col" className="px-3 py-2 text-left text-xs font-bold text-gray-300 uppercase tracking-wider w-2/5">학생 명단</th>
+                    </tr>
+                </thead>
+                <tbody className="bg-transparent divide-y divide-gray-700/50">
+                    {scheduleForSelectedDate.map(cls => (
+                    <tr key={cls.id} className="hover:bg-gray-800/40 transition-colors">
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300 font-semibold">{cls.startTime} - {cls.endTime}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm font-bold text-white">{cls.name}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">{cls.teacherName}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">{cls.room}</td>
+                        <td className="px-3 py-2 whitespace-nowrap text-sm text-gray-300">{cls.students.length}명</td>
+                        <td className="px-3 py-2 text-sm text-gray-300 align-top">
+                        <div className="flex flex-wrap gap-1">
+                            {cls.students.map(student => (
+                            <div key={student.id} className="bg-gray-700/60 px-2 py-0.5 rounded-full text-xs text-gray-200">
+                                {student.name}
+                                {student.individualSchedule && (
+                                <span className="text-yellow-400/90 ml-1 text-[10px]">({student.individualSchedule})</span>
+                                )}
                             </div>
+                            ))}
                         </div>
-
-                        {/* Student List */}
-                        <div className="md:col-span-2">
-                            <h3 className="text-lg font-semibold text-white mb-3">학생 명단</h3>
-                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-2">
-                                {cls.students.map(student => (
-                                    <div key={student.id} className="bg-gray-800/50 p-2 rounded-md text-sm text-center">
-                                        <p className="text-gray-200 truncate">{student.name}</p>
-                                        {student.individualSchedule && (
-                                            <p className="text-xs text-yellow-400">{student.individualSchedule}</p>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </Card>
-            ))}
-        </div>
+                        </td>
+                    </tr>
+                    ))}
+                </tbody>
+                </table>
+            </div>
+        </Card>
       ) : (
         <Card>
             <div className="text-center py-12">

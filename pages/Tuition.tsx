@@ -26,41 +26,10 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
 
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s])), [students]);
-
-    // FIX: Explicitly provide `undefined` as the initial value to `useRef` to satisfy the requirement of passing at least one argument.
-    const prevTuitionsRef = useRef<Tuition[] | undefined>(undefined);
+    
     useEffect(() => {
-        prevTuitionsRef.current = tuitions;
-    });
-    const prevTuitions = prevTuitionsRef.current;
-
-    useEffect(() => {
-        // This effect syncs the view with the global `tuitions` state when the month or global data changes.
-        // It's designed to be non-destructive to local "unsaved" items (e.g., newly generated tuition data).
-        const savedDataForMonth = tuitions.filter(t => t.month === selectedMonth);
-
-        setMonthlyData(currentLocalData => {
-            // An "unsaved item" is one that exists locally but not in the current global state.
-            // A "deleted item" is one that exists locally and in the *previous* global state, but not the current one.
-            // We want to preserve unsaved items but not re-add deleted ones.
-            const unsavedItems = currentLocalData.filter(localItem => {
-                if (localItem.month !== selectedMonth) return false;
-
-                const isInCurrentTuitions = tuitions.some(globalItem => globalItem.id === localItem.id);
-                if (isInCurrentTuitions) return false; // It's a saved item.
-
-                const isInPrevTuitions = prevTuitions?.some(prevItem => prevItem.id === localItem.id);
-                // If it was in the previous state but not the current one, it's a deleted item. Don't preserve it.
-                if (isInPrevTuitions) return false;
-
-                // Otherwise, it's a genuinely new, unsaved item. Preserve it.
-                return true;
-            });
-            
-            // The new state is the combination of the authoritative saved data from props
-            // and any unsaved items that currently exist in the local state.
-            return [...savedDataForMonth, ...unsavedItems];
-        });
+        const dataForMonth = tuitions.filter(t => t.month === selectedMonth);
+        setMonthlyData(dataForMonth);
 
         setCurrentPage(1);
         setSelectedIds([]);
@@ -79,31 +48,39 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
         const [year, monthNum] = selectedMonth.split('-').map(Number);
         const startDate = new Date(year, monthNum - 1, 1).toISOString().split('T')[0];
         const endDate = new Date(year, monthNum, 0).toISOString().split('T')[0];
-        const endOfMonth = new Date(endDate);
-        endOfMonth.setHours(23, 59, 59, 999); // Ensure the comparison includes the entire last day
         
         const prevMonthDate = new Date(year, monthNum - 2, 1);
         const prevMonthStr = `${prevMonthDate.getFullYear()}-${String(prevMonthDate.getMonth() + 1).padStart(2, '0')}`;
         const prevMonthTuitionsMap = new Map(tuitions.filter(t => t.month === prevMonthStr).map(t => [t.studentId, t]));
 
-        const eligibleStudents = students.filter(s => {
-            // Student must be enrolled on or before the last day of the selected month.
-            const isEnrolledInTime = new Date(s.enrollmentDate) <= endOfMonth;
-            // Student must not have withdrawn during or before the selected month.
-            // If they have a withdrawal date, it must be after the end of the month.
-            const isNotWithdrawnInMonth = !s.withdrawalDate || new Date(s.withdrawalDate) > endOfMonth;
+        const endOfMonth = new Date(endDate);
+        endOfMonth.setHours(23, 59, 59, 999);
+        const startOfMonth = new Date(startDate);
 
-            // This logic is based on the request to exclude any student who withdrew within the month.
-            // It also implicitly handles students whose status might be `ENROLLED` but have a past withdrawal date.
-            return isEnrolledInTime && isNotWithdrawnInMonth;
+        const eligibleStudents = students.filter(s => {
+            const enrollmentDate = new Date(s.enrollmentDate);
+            const withdrawalDate = s.withdrawalDate ? new Date(s.withdrawalDate) : null;
+            
+            const enrolledInTime = enrollmentDate <= endOfMonth;
+            const notWithdrawnBefore = !withdrawalDate || withdrawalDate >= startOfMonth;
+
+            return s.status === StudentStatus.ENROLLED && enrolledInTime && notWithdrawnBefore;
         });
+
+        const eligibleStudentIds = new Set(eligibleStudents.map(s => s.id));
         
         const MIDDLE_SCHOOL_FEE = 450000;
         const HIGH_SCHOOL_FEE = 550000;
         const BASE_SESSIONS = 8;
+        const SIBLING_DISCOUNT_RATE = 0.1;
         
         const newTuitionData: Tuition[] = eligibleStudents.map(student => {
             const prevTuition = prevMonthTuitionsMap.get(student.id);
+
+            // Check for enrolled siblings for discount
+            const hasEnrolledSibling = student.siblings.some(siblingId => eligibleStudentIds.has(siblingId));
+            const shouldApplyDiscount = hasEnrolledSibling && student.id > (student.siblings[0] || 0);
+            const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
 
             if (prevTuition) {
                 const copiedData = { ...prevTuition };
@@ -113,6 +90,7 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
                 copiedData.calculationPeriodStart = startDate;
                 copiedData.calculationPeriodEnd = endDate;
                 copiedData.paymentStatus = '미결제';
+                copiedData.siblingDiscountRate = siblingDiscountRate;
 
                 const subtotal = copiedData.perSessionFee * copiedData.scheduledSessions;
                 copiedData.siblingDiscountAmount = Math.round(subtotal * copiedData.siblingDiscountRate);
@@ -122,6 +100,10 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             } else {
                 const baseFee = student.grade.startsWith('고') ? HIGH_SCHOOL_FEE : MIDDLE_SCHOOL_FEE;
                 const perSessionFee = baseFee / BASE_SESSIONS;
+                const subtotal = baseFee;
+                const siblingDiscountAmount = Math.round(subtotal * siblingDiscountRate);
+                const finalFee = subtotal - siblingDiscountAmount;
+
                 return {
                     id: `${student.id}-${selectedMonth}`,
                     studentId: student.id,
@@ -132,17 +114,21 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
                     baseSessions: BASE_SESSIONS,
                     perSessionFee: Math.round(perSessionFee),
                     scheduledSessions: BASE_SESSIONS,
-                    siblingDiscountRate: 0,
-                    siblingDiscountAmount: 0,
+                    siblingDiscountRate,
+                    siblingDiscountAmount,
                     otherDiscount: 0,
-                    finalFee: Math.round(baseFee),
+                    finalFee: Math.round(finalFee),
                     paymentStatus: '미결제',
                     notes: '신규 산정',
                 };
             }
         });
 
-        setMonthlyData(newTuitionData);
+        setTuitions(prev => [
+            ...prev.filter(t => t.month !== selectedMonth),
+            ...newTuitionData
+        ]);
+        
         setTimeout(() => setIsLoading(false), 500);
     };
 
@@ -342,23 +328,13 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             return;
         }
 
-        // snapshot selected IDs to avoid stale closures
         const idsToDelete = new Set(selectedIds);
-
-        // 1) remove from local monthlyData (handles newly generated / unsaved items too)
-        setMonthlyData(prevData => prevData.filter(t => !idsToDelete.has(t.id)));
-
-        // 2) remove from global state (handles already-saved items)
         setTuitions(prev => prev.filter(t => !idsToDelete.has(t.id)));
-
-        // 3) clear selection and header checkbox immediately for better UX
         setSelectedIds([]);
         if (headerCheckboxRef.current) {
             headerCheckboxRef.current.checked = false;
             headerCheckboxRef.current.indeterminate = false;
         }
-
-        // 4) reset to first page to avoid landing on out-of-range page
         setCurrentPage(1);
     };
 

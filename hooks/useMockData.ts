@@ -8,6 +8,7 @@ const SURNAMES = ['김', '이', '박', '최', '정', '강', '조', '윤', '장',
 const GIVEN_NAMES_MALE = ['민준', '서준', '도윤', '예준', '시우', '하준', '지호', '주원', '지훈', '준서', '건우', '현우', '우진', '선우', '유준'];
 const GIVEN_NAMES_FEMALE = ['서아', '하윤', '지안', '서윤', '하은', '지우', '아윤', '서연', '수아', '시아', '민서', '아린', '예린', '채원', '다은'];
 const SCHOOLS = ['헤라중학교', '가온중학교', '대한고등학교', '세종고등학교', '미래중학교', '으뜸초등학교', '새솔초등학교'];
+const FEMALE_SURNAMES = ['송', '유', '전', '문', '손', '양', '배', '백', '허', '남'];
 
 const getRandom = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const getRandomInt = (min: number, max: number): number => Math.floor(Math.random() * (max - min + 1)) + min;
@@ -16,8 +17,35 @@ const getRandomDate = (start: Date, end: Date): string => {
     return date.toISOString().split('T')[0];
 };
 
+// 학생 유형(Archetype) 정의
+enum Archetype {
+    DILIGENT, // 성실형
+    AVERAGE,  // 보통
+    STRUGGLING, // 노력필요형
+    FLUCTUATING, // 기복형
+    POTENTIAL, // 잠재력형
+}
+
+const getArchetype = (): Archetype => {
+    const rand = Math.random();
+    if (rand < 0.3) return Archetype.AVERAGE;      // 30%
+    if (rand < 0.55) return Archetype.DILIGENT;     // 25%
+    if (rand < 0.75) return Archetype.STRUGGLING;   // 20%
+    if (rand < 0.9) return Archetype.FLUCTUATING;  // 15%
+    return Archetype.POTENTIAL;                    // 5%
+};
+
 const createInitialData = () => {
-    const simToday = new Date(2025, 8, 15); // 시뮬레이션 기준일: 2025년 9월 15일
+    // --- 시뮬레이션 설정 ---
+    const SIM_END_DATE = new Date(2025, 8, 15); // 기준일: 2025년 9월 15일
+    const SIM_START_DATE = new Date(2024, 8, 1); // 1년 전: 2024년 9월 1일
+    const CURRENT_MONTH_START = new Date(SIM_END_DATE.getFullYear(), SIM_END_DATE.getMonth(), 1);
+
+    const TOTAL_STUDENTS_POOL = 200;
+    const FINAL_ENROLLED_COUNT = 130;
+    const NEW_STUDENTS_THIS_MONTH_COUNT = 5;
+    const WITHDRAWN_COUNT = TOTAL_STUDENTS_POOL - FINAL_ENROLLED_COUNT;
+    const CONTINUING_ENROLLED_COUNT = FINAL_ENROLLED_COUNT - NEW_STUDENTS_THIS_MONTH_COUNT;
 
     // 1. 강사 데이터 (5명)
     const teachers: Teacher[] = [
@@ -28,60 +56,113 @@ const createInitialData = () => {
       { id: 5, name: '최직원', position: '직원', role: 'operator', hireDate: '2025-01-01', phone: '010-4444-4444', email: 'choi@hera.math', resignationDate: '' },
     ];
 
-    // 2. 학생 데이터 생성 (320명)
-    const students: Student[] = Array.from({ length: 320 }, (_, i) => {
+    // 2. 학생 데이터 생성
+    const students: Student[] = [];
+
+    // 2.1 당월 신규 학생 (5명)
+    for (let i = 0; i < NEW_STUDENTS_THIS_MONTH_COUNT; i++) {
+        students.push({
+            enrollmentDate: getRandomDate(CURRENT_MONTH_START, SIM_END_DATE),
+            status: StudentStatus.ENROLLED,
+            withdrawalDate: undefined,
+        } as Student);
+    }
+    
+    // 2.2 기존 재원생 (125명)
+    for (let i = 0; i < CONTINUING_ENROLLED_COUNT; i++) {
+        students.push({
+            enrollmentDate: getRandomDate(SIM_START_DATE, CURRENT_MONTH_START),
+            status: StudentStatus.ENROLLED,
+            withdrawalDate: undefined,
+        } as Student);
+    }
+    
+    // 2.3 퇴원생 (70명)
+    for (let i = 0; i < WITHDRAWN_COUNT; i++) {
+        const enrollmentDate = getRandomDate(SIM_START_DATE, new Date(SIM_END_DATE.getTime() - 60 * 86400000)); // 최소 60일 재원 보장
+        const withdrawalDate = getRandomDate(new Date(new Date(enrollmentDate).getTime() + 60 * 86400000), SIM_END_DATE);
+        students.push({
+            enrollmentDate,
+            status: StudentStatus.WITHDRAWN,
+            withdrawalDate,
+        } as Student);
+    }
+
+    // 2.4 나머지 학생 정보 채우기
+    students.forEach((student, i) => {
         const id = i + 1;
         const gender = Math.random() > 0.5 ? '남' : '여';
-        const name = getRandom(SURNAMES) + (gender === '남' ? getRandom(GIVEN_NAMES_MALE) : getRandom(GIVEN_NAMES_FEMALE));
+        const studentSurname = getRandom(SURNAMES);
+        const name = studentSurname + (gender === '남' ? getRandom(GIVEN_NAMES_MALE) : getRandom(GIVEN_NAMES_FEMALE));
         const gradeNum = getRandomInt(1, 6);
         let grade = '';
         if (gradeNum <= 3) grade = `고${gradeNum}`;
         else grade = `중${gradeNum-3}`;
+        const archetype = getArchetype();
 
-        let status: StudentStatus;
-        if (i < 100) { // 퇴원생 100명
-            status = StudentStatus.WITHDRAWN;
-        } else if (i < 115) { // 상담/대기 15명
-            status = StudentStatus.CONSULTING;
-        } else { // 재원생 205명
-            status = StudentStatus.ENROLLED;
+        let avgScore, attendanceRate, homeworkRate, diagnosticTestNotes;
+        switch (archetype) {
+            case Archetype.DILIGENT:
+                avgScore = getRandomInt(90, 100); attendanceRate = getRandomInt(98, 100); homeworkRate = getRandomInt(95, 100);
+                diagnosticTestNotes = "개념 이해도가 매우 높고, 풀이 과정이 논리적임. 심화 문제 해결 능력도 뛰어남.";
+                break;
+            case Archetype.STRUGGLING:
+                avgScore = getRandomInt(60, 75); attendanceRate = getRandomInt(85, 95); homeworkRate = getRandomInt(70, 85);
+                diagnosticTestNotes = "기본 연산에서 실수가 잦고, 특정 단원의 개념 이해에 어려움을 보임. 꾸준한 복습 필요.";
+                break;
+            case Archetype.FLUCTUATING:
+                avgScore = getRandomInt(75, 95); attendanceRate = getRandomInt(90, 100); homeworkRate = getRandomInt(80, 95);
+                diagnosticTestNotes = "문제 난이도나 컨디션에 따라 성적 편차가 있음. 서술형 문제 대비가 필요해 보임.";
+                break;
+            case Archetype.POTENTIAL:
+                avgScore = getRandomInt(80, 95); attendanceRate = getRandomInt(88, 98); homeworkRate = getRandomInt(75, 90);
+                diagnosticTestNotes = "이해력은 좋으나 과제 완성도가 다소 아쉬움. 학습 태도를 개선하면 상위권 도약 가능.";
+                break;
+            default: // AVERAGE
+                avgScore = getRandomInt(80, 92); attendanceRate = getRandomInt(95, 100); homeworkRate = getRandomInt(90, 100);
+                diagnosticTestNotes = "기본 개념 이해도 양호. 응용 문제 풀이 연습을 통해 성적 향상 기대.";
+                break;
         }
-        
-        const enrollmentDate = getRandomDate(new Date(2025, 0, 1), simToday);
-        const enrollmentDateObj = new Date(enrollmentDate);
-        // 퇴원일은 등록일로부터 최소 30일 이후
-        const withdrawalDate = status === StudentStatus.WITHDRAWN ? getRandomDate(new Date(enrollmentDateObj.getTime() + 86400000 * 30), simToday) : undefined;
 
-        return {
+        Object.assign(student, {
             id,
-            attendanceId: (1000 + id).toString(),
+            attendanceId: student.status === StudentStatus.ENROLLED ? (1000 + id).toString() : '',
             name: `${name}`,
             gender,
             school: getRandom(SCHOOLS),
             grade,
-            enrollmentDate,
-            withdrawalDate,
-            status,
             siblings: [],
             studentPhone: `010-${getRandomInt(1000, 9999)}-${getRandomInt(1000, 9999)}`,
-            motherName: `${name} 모`,
+            motherName: `${getRandom(FEMALE_SURNAMES)}${getRandom(GIVEN_NAMES_FEMALE)}`,
             motherPhone: `010-${getRandomInt(1000, 9999)}-${getRandomInt(1000, 9999)}`,
-            fatherName: '',
-            fatherPhone: '',
+            fatherName: Math.random() > 0.3 ? `${studentSurname}${getRandom(GIVEN_NAMES_MALE)}` : '',
+            fatherPhone: Math.random() > 0.3 ? `010-${getRandomInt(1000, 9999)}-${getRandomInt(1000, 9999)}` : '',
             sendSmsToBoth: Math.random() > 0.8,
             tuitionPayer: '모',
             regularClassId: null,
             advancedClassId: null,
             teacherId: null,
-            avgScore: getRandomInt(75, 100),
-            attendanceRate: getRandomInt(90, 100),
-            homeworkRate: getRandomInt(85, 100),
-            diagnosticTestScore: Math.random() > 0.3 
-                ? getRandomInt(70, 95).toString() 
-                : `${getRandomInt(17, 24)}/25`,
-            diagnosticTestNotes: '기본 개념 이해도 양호. 응용 문제 풀이 연습 필요.',
-        };
+            avgScore, attendanceRate, homeworkRate, diagnosticTestNotes,
+            diagnosticTestScore: Math.random() > 0.3 ? getRandomInt(70, 95).toString() : `${getRandomInt(17, 24)}/25`,
+        });
     });
+
+    // 2.5 형제 관계 생성
+    const enrolledStudents = students.filter(s => s.status === StudentStatus.ENROLLED);
+    for (let i = 0; i < 15; i++) { // 15쌍의 형제 생성
+        const s1 = getRandom(enrolledStudents);
+        const potentialSiblings = enrolledStudents.filter(s2 => s2.id !== s1.id && s1.siblings.length === 0 && s2.siblings.length === 0);
+        if (potentialSiblings.length > 0) {
+            const s2 = getRandom(potentialSiblings);
+            s1.siblings.push(s2.id);
+            s2.siblings.push(s1.id);
+            // 부모 정보 통일
+            s2.motherName = s1.motherName;
+            s2.motherPhone = s1.motherPhone;
+            s2.fatherName = s1.fatherName;
+            s2.fatherPhone = s1.fatherPhone;
+        }
+    }
 
     // 3. 반 데이터 생성
     const classNames = [
@@ -128,21 +209,19 @@ const createInitialData = () => {
         return { id: index + 1, name, teacherId, grade, studentIds: [], schedule, room: `${getRandomInt(2, 5)}0${getRandomInt(1, 4)}호`, capacity };
     });
 
-    // 4. 모든 학생을 반에 배정
+    // 4. 재원생을 반에 배정
     const regularClasses = classes.filter(c => c.name.startsWith('월목') || c.name.startsWith('화금') || c.name.startsWith('고등'));
     const advancedClasses = classes.filter(c => c.name.startsWith('수'));
 
-    students.forEach(student => {
-        // Assign to regular class
+    students.filter(s => s.status === StudentStatus.ENROLLED).forEach(student => {
         const appropriateRegularClasses = regularClasses.filter(c => c.grade.includes(student.grade) && c.studentIds.length < c.capacity);
         if (appropriateRegularClasses.length > 0) {
             const selectedClass = getRandom(appropriateRegularClasses);
             selectedClass.studentIds.push(student.id);
             student.regularClassId = selectedClass.id;
-            student.teacherId = selectedClass.teacherId; // Main teacher from regular class
+            student.teacherId = selectedClass.teacherId;
         }
 
-        // Assign to advanced class (about 40% chance for middle schoolers)
         if (student.grade.startsWith('중') && Math.random() > 0.6) {
             const appropriateAdvancedClasses = advancedClasses.filter(c => c.grade.includes(student.grade) && c.studentIds.length < c.capacity);
             if (appropriateAdvancedClasses.length > 0) {
@@ -155,49 +234,39 @@ const createInitialData = () => {
         }
     });
 
-    // 4.1 수요일 자율반 학생 개별 시간 설정
-    const wednesdayClassA = classes.find(c => c.name === '수A');
-    if (wednesdayClassA && wednesdayClassA.studentIds.length > 2) {
-        wednesdayClassA.studentSchedules = [
-            { studentId: wednesdayClassA.studentIds[0], startTime: '13:30', endTime: '15:30' },
-            { studentId: wednesdayClassA.studentIds[1], startTime: '15:00', endTime: '17:00' },
-        ];
-    }
-
-
-    // 5. 수업 기록 생성 (2025년 1월 1일 ~ 현재)
+    // 5. 수업 기록 생성 (재원 기간 동안만)
     const lessonRecords: LessonRecord[] = [];
     let lessonRecordId = 1;
     const scheduleMap: { [key: string]: number } = { '월': 1, '화': 2, '수': 3, '목': 4, '금': 5, '토': 6, '일': 0 };
-    const homeworkGrades: HomeworkGrade[] = ['A', 'A', 'A', 'B', 'B', 'C', 'D', 'F']; // Skew towards better grades
+    const homeworkGrades: HomeworkGrade[] = ['A', 'A', 'A', 'B', 'B', 'C', 'D', 'F'];
     const textbooks = ['쎈', 'RPM', '개념원리', '블랙라벨', '일품'];
+    const positiveNotes = ['수업 집중도 매우 좋음', '질문 내용이 좋음', '오답노트 정리 우수'];
+    const negativeNotes = ['수업 중 집중력 저하', '풀이 과정 생략하는 경향', '개념 이해 부족'];
 
     const createScore = (): string | null => {
-        if (Math.random() < 0.3) return null; // 30% chance of no test for a given slot
-        if (Math.random() < 0.5) {
-            return getRandomInt(60, 100).toString(); // e.g., '85'
-        } else {
+        if (Math.random() < 0.3) return null;
+        if (Math.random() < 0.5) return getRandomInt(60, 100).toString();
+        else {
             const total = getRandom([10, 15, 20, 25]);
             const correct = getRandomInt(Math.floor(total * 0.6), total);
-            return `${correct}/${total}`; // e.g., '17/20'
+            return `${correct}/${total}`;
         }
     };
-
-    students.filter(s => s.regularClassId || s.advancedClassId).forEach(student => {
+    
+    students.forEach(student => {
         const studentClasses = [
             classes.find(c => c.id === student.regularClassId),
             classes.find(c => c.id === student.advancedClassId)
         ].filter(Boolean) as Class[];
+        
+        if (studentClasses.length === 0) return;
+
+        const activeStartDate = new Date(student.enrollmentDate);
+        const activeEndDate = student.withdrawalDate ? new Date(student.withdrawalDate) : SIM_END_DATE;
 
         studentClasses.forEach(studentClass => {
-            if (!studentClass) return;
             const classDays = studentClass.schedule.split(', ')[0].split(' ')[0].split('/').map(day => scheduleMap[day]);
-            for (let d = new Date(2025, 0, 1); d <= simToday; d.setDate(d.getDate() + 1)) {
-                 // 학생의 등록일 이전이거나, 퇴원일 이후인 경우 기록을 생성하지 않음
-                if (d < new Date(student.enrollmentDate) || (student.withdrawalDate && d > new Date(student.withdrawalDate))) {
-                    continue;
-                }
-
+            for (let d = new Date(activeStartDate); d <= activeEndDate; d.setDate(d.getDate() + 1)) {
                 if (classDays.includes(d.getDay())) {
                      const attendanceRoll = Math.random();
                      let attendance: LessonRecord['attendance'] = '출석';
@@ -213,7 +282,7 @@ const createInitialData = () => {
                         testScore3: createScore(),
                         homework: getRandom(homeworkGrades), 
                         attitude: getRandom(['매우 좋음', '보통', '안좋음']), 
-                        notes: Math.random() > 0.8 ? '수업 집중도 매우 좋음' : '',
+                        notes: Math.random() > 0.8 ? (Math.random() > 0.5 ? getRandom(positiveNotes) : getRandom(negativeNotes)) : '',
                         requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
                         main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
                         supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
@@ -224,113 +293,56 @@ const createInitialData = () => {
         });
     });
 
-    // Manually populate all of September 2025 for '월목1A' to ensure testability.
-    const demoClass = classes.find(c => c.name === '월목1A');
-    if (demoClass) {
-        const demoClassStudents = demoClass.studentIds;
-        const demoClassDays = demoClass.schedule.split(', ')[0].split(' ')[0].split('/').map(day => scheduleMap[day]);
-        const year = 2025;
-        const month = 8; // September
-
-        const date = new Date(year, month, 1);
-        while (date.getMonth() === month) {
-            if (demoClassDays.includes(date.getDay())) {
-                const dateString = date.toISOString().split('T')[0];
-                demoClassStudents.forEach((studentId, studentIndex) => {
-                    const recordExists = lessonRecords.some(r => r.studentId === studentId && r.date === dateString);
-                    if (!recordExists) {
-                        // Special cases for testing notification buttons
-                        if (dateString === '2025-09-15' && studentIndex === 0) {
-                            // First student is absent to trigger notification
-                             lessonRecords.push({
-                                id: lessonRecordId++,
-                                date: dateString,
-                                studentId: studentId,
-                                attendance: '결석',
-                                testScore1: '80', testScore2: null, testScore3: null,
-                                homework: 'A',
-                                attitude: '보통',
-                                notes: '결석',
-                                requested_test: '',
-                                main_textbook: `${getRandom(textbooks)} 110p`, supplementary_textbook: '', reinforcement_textbook: '',
-                            });
-                        } else if (dateString === '2025-09-18') {
-                            // All students have perfect records, should not trigger notification
-                             lessonRecords.push({
-                                id: lessonRecordId++,
-                                date: dateString,
-                                studentId: studentId,
-                                attendance: '출석',
-                                testScore1: createScore(), testScore2: createScore(), testScore3: createScore(),
-                                homework: 'A',
-                                attitude: '매우 좋음',
-                                notes: '수업 태도 우수',
-                                requested_test: '',
-                                main_textbook: `${getRandom(textbooks)} 115p`, supplementary_textbook: '', reinforcement_textbook: '',
-                            });
-                        } else {
-                            // Default random record generation
-                            const attendanceRoll = Math.random();
-                            let attendance: LessonRecord['attendance'] = '출석';
-                            if (attendanceRoll > 0.95) attendance = '결석';
-                            else if (attendanceRoll > 0.9) attendance = '지각';
-                            lessonRecords.push({
-                                id: lessonRecordId++,
-                                date: dateString,
-                                studentId: studentId,
-                                attendance,
-                                testScore1: createScore(),
-                                testScore2: createScore(),
-                                testScore3: createScore(),
-                                homework: getRandom(homeworkGrades),
-                                attitude: getRandom(['매우 좋음', '보통', '안좋음']),
-                                notes: Math.random() > 0.8 ? '추가 학습 필요' : '개념 이해 완료',
-                                requested_test: Math.random() > 0.9 ? '오답노트 확인 필수' : '',
-                                main_textbook: `${getRandom(textbooks)} ${getRandomInt(50,150)}p`,
-                                supplementary_textbook: Math.random() > 0.6 ? `${getRandom(textbooks)} ${getRandomInt(20,80)}p` : '',
-                                reinforcement_textbook: Math.random() > 0.4 ? `${getRandom(textbooks)} ${getRandomInt(10,40)}p` : '',
-                            });
-                        }
-                    }
-                });
-            }
-            date.setDate(date.getDate() + 1);
-        }
-    }
-    
-    // 6. 월간 리포트 생성
+    // 6. 월간 리포트 생성 (재원 기간 내 매월)
     const monthlyReports: MonthlyReport[] = [];
     let reportId = 1;
-    const lastMonth = new Date(simToday.getFullYear(), simToday.getMonth() - 1, 1);
-    const endOfLastMonth = new Date(simToday.getFullYear(), simToday.getMonth(), 0);
-    const reportPeriod = `${lastMonth.getFullYear()}년 ${lastMonth.getMonth() + 1}월`;
+    students.forEach(student => {
+        const start = new Date(student.enrollmentDate);
+        const end = student.withdrawalDate ? new Date(student.withdrawalDate) : SIM_END_DATE;
 
-    students.filter(s => s.status === StudentStatus.ENROLLED && s.teacherId).forEach(student => {
-        monthlyReports.push({ id: reportId++, studentId: student.id, period: reportPeriod, attendanceRate: student.attendanceRate, avgScore: student.avgScore, homeworkRate: student.homeworkRate, attitudeRate: getRandomInt(85, 100), counselingSummary: '특별한 상담 내역 없음.', sentDate: endOfLastMonth.toISOString().split('T')[0], teacherId: student.teacherId as number, reviewText: `${student.name} 학생은 지난 한 달간 꾸준한 학습 태도를 보여주었습니다. 특히 ${getRandom(['연산', '도형', '함수'])} 파트에서 강점을 보이고 있으며, 오답 노트 정리를 통해 약점을 보완해나가고 있습니다.`, sentStatus: Math.random() > 0.3 ? '발송완료' : '미발송' });
-    });
-
-    // 7. 상담 기록 생성
-    const COUNSELING_TOPICS = ['2학기 내신 대비 학습 전략 상담', '수학 학습에 대한 흥미 저하 문제 논의', '심화 문제 풀이 능력 향상 방안 상담', '겨울방학 특강 프로그램 문의', '오답 노트 작성 및 활용법 지도', '진로 및 입시 관련 상담', '최근 테스트 결과 분석 및 피드백', '교우 관계 및 학교 생활 관련 상담'];
-    const COUNSELING_TYPES = ['정기상담', '학습상담', '진로상담', '내신대비', '신규상담'];
-    const counselings: Counseling[] = [];
-    let counselingId = 1;
-    students.filter(s => s.status === StudentStatus.ENROLLED || s.status === StudentStatus.WITHDRAWN).slice(0, 70).forEach(student => {
-        if (student.teacherId) {
-            counselings.push({
-                id: counselingId++,
-                date: getRandomDate(new Date(student.enrollmentDate), student.withdrawalDate ? new Date(student.withdrawalDate) : simToday),
-                studentId: student.id,
-                parentName: student.motherName,
-                teacherId: student.teacherId,
-                content: getRandom(COUNSELING_TOPICS),
-                followUp: '주간 테스트 결과 확인 후 추가 피드백 예정.',
-                type: getRandom(COUNSELING_TYPES),
+        for (let d = new Date(start.getFullYear(), start.getMonth(), 1); d <= end; d.setMonth(d.getMonth() + 1)) {
+             monthlyReports.push({ 
+                id: reportId++, 
+                studentId: student.id, 
+                period: `${d.getFullYear()}년 ${d.getMonth() + 1}월`, 
+                attendanceRate: student.attendanceRate, 
+                avgScore: student.avgScore, 
+                homeworkRate: student.homeworkRate, 
+                attitudeRate: getRandomInt(85, 100), 
+                counselingSummary: '특별한 상담 내역 없음.', 
+                sentDate: new Date(d.getFullYear(), d.getMonth() + 1, 0).toISOString().split('T')[0], 
+                teacherId: student.teacherId as number, 
+                reviewText: `${student.name} 학생은 지난 한 달간 꾸준한 학습 태도를 보여주었습니다.`, 
+                sentStatus: Math.random() > 0.3 ? '발송완료' : '미발송' 
             });
         }
     });
 
+    // 7. 상담 기록 생성
+    const COUNSELING_TOPICS = ['2학기 내신 대비 학습 전략 상담', '수학 학습에 대한 흥미 저하 문제 논의', '심화 문제 풀이 능력 향상 방안 상담', '오답 노트 작성법 지도', '방학 특강 수강 문의'];
+    const COUNSELING_TYPES = ['정기상담', '학습상담', '진로상담', '내신대비', '신규상담'];
+    const counselings: Counseling[] = [];
+    let counselingId = 1;
+    students.slice(0, 100).forEach(student => {
+        if (student.teacherId) {
+            // Generate 1 to 3 counseling records per student
+            for (let i = 0; i < getRandomInt(1, 3); i++) {
+                counselings.push({
+                    id: counselingId++,
+                    date: getRandomDate(new Date(student.enrollmentDate), student.withdrawalDate ? new Date(student.withdrawalDate) : SIM_END_DATE),
+                    studentId: student.id,
+                    parentName: student.motherName,
+                    teacherId: student.teacherId,
+                    content: getRandom(COUNSELING_TOPICS),
+                    followUp: '주간 테스트 결과 확인 후 추가 피드백 예정.',
+                    type: getRandom(COUNSELING_TYPES),
+                });
+            }
+        }
+    });
+
     // 8. 기타 데이터
-    const initialTuitions: Tuition[] = [];
+    const initialTuitions: Tuition[] = []; // Tuition data will be generated on the page
     const academyEvents: AcademyEvent[] = [
         { id: 1, title: '여름방학 특강 시작', type: '학사', startDate: '2025-07-21', endDate: '2025-08-15', relatedClassIds: [], notes: '전 학년 대상'},
         { id: 2, title: '전국 모의고사', type: '시험', startDate: '2025-09-04', endDate: '2025-09-04', relatedClassIds: classes.filter(c => c.name.startsWith('고등')).map(c => c.id), notes: '고등부 대상'},
@@ -376,11 +388,11 @@ export const useMockData = () => {
             { name: '지각', value: 3, fill: '#9ca3af' },
         ],
         scoreTrends: [
-            { name: '1월', '평균 점수': 82 },
-            { name: '2월', '평균 점수': 85 },
-            { name: '3월', '평균 점수': 84 },
-            { name: '4월', '평균 점수': 88 },
-            { name: '5월', '평균 점수': 91 },
+            { name: '4월', '평균 점수': 82 },
+            { name: '5월', '평균 점수': 85 },
+            { name: '6월', '평균 점수': 84 },
+            { name: '7월', '평균 점수': 88 },
+            { name: '8월', '평균 점수': 91 },
         ],
         schedule: academyEvents.slice(0, 3).map(e => ({ time: e.startDate, event: e.title })),
     };

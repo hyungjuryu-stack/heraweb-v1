@@ -45,7 +45,7 @@ const Students: React.FC<StudentsPageProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
-  const [selectedIds, setSelectedIds] = useState<number[]>([]);
+  const [selectedIds, setSelectedIds] = useState(new Set<number>());
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
@@ -139,7 +139,7 @@ const Students: React.FC<StudentsPageProps> = ({
 
   useEffect(() => {
     if (headerCheckboxRef.current) {
-        const numSelected = selectedIds.length;
+        const numSelected = selectedIds.size;
         const numItems = filteredAndSortedStudents.length;
         headerCheckboxRef.current.checked = numSelected === numItems && numItems > 0;
         headerCheckboxRef.current.indeterminate = numSelected > 0 && numSelected < numItems;
@@ -240,42 +240,55 @@ const Students: React.FC<StudentsPageProps> = ({
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.checked) {
-          setSelectedIds(filteredAndSortedStudents.map(s => s.id));
+          setSelectedIds(new Set(filteredAndSortedStudents.map(s => s.id)));
       } else {
-          setSelectedIds([]);
+          setSelectedIds(new Set());
       }
   };
 
   const handleSelectItem = (id: number) => {
-      setSelectedIds(prev =>
-          prev.includes(id) ? prev.filter(sid => sid !== id) : [...prev, id]
-      );
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(id)) {
+            newSet.delete(id);
+        } else {
+            newSet.add(id);
+        }
+        return newSet;
+      });
   };
 
   const handleDeleteSelected = () => {
-    if (window.confirm(`${selectedIds.length}명의 학생을 정말로 삭제하시겠습니까? 학생과 관련된 모든 기록이 영구적으로 삭제됩니다.`)) {
-        if (selectedIds.includes(viewingStudent?.id ?? -1)) {
-            setViewingStudent(null);
-        }
-        setStudents(prev => prev.filter(s => !selectedIds.includes(s.id)));
-        setClasses(prev => prev.map(c => ({
-            ...c,
-            studentIds: c.studentIds.filter(id => !selectedIds.includes(id))
-        })));
-        setLessonRecords(prev => prev.filter(r => !selectedIds.includes(r.studentId)));
-        setMonthlyReports(prev => prev.filter(r => !selectedIds.includes(r.studentId)));
-        setTuitions(prev => prev.filter(t => !selectedIds.includes(t.studentId)));
-        setCounselings(prev => prev.filter(c => !selectedIds.includes(c.studentId)));
-        setSelectedIds([]);
+    if (selectedIds.size === 0 || !window.confirm(`${selectedIds.size}명의 학생을 정말로 삭제하시겠습니까? 학생과 관련된 모든 기록이 영구적으로 삭제됩니다.`)) {
+        return;
     }
+
+    const idsToDelete = selectedIds;
+
+    if (viewingStudent && idsToDelete.has(viewingStudent.id)) {
+        setViewingStudent(null);
+    }
+
+    setStudents(prev => prev.filter(s => !idsToDelete.has(s.id)));
+    setClasses(prev => prev.map(c => ({
+        ...c,
+        studentIds: c.studentIds.filter(id => !idsToDelete.has(id))
+    })));
+    setLessonRecords(prev => prev.filter(r => !idsToDelete.has(r.studentId)));
+    setMonthlyReports(prev => prev.filter(r => !idsToDelete.has(r.studentId)));
+    setTuitions(prev => prev.filter(t => !idsToDelete.has(t.studentId)));
+    setCounselings(prev => prev.filter(c => !idsToDelete.has(c.studentId)));
+    
+    setSelectedIds(new Set());
+    setCurrentPage(1);
   };
 
   const handleSelectAllClick = () => {
-    setSelectedIds(filteredAndSortedStudents.map(s => s.id));
+    setSelectedIds(new Set(filteredAndSortedStudents.map(s => s.id)));
   };
 
   const handleDeselectAllClick = () => {
-    setSelectedIds([]);
+    setSelectedIds(new Set());
   };
 
   const headers: { key: string; label: string }[] = [
@@ -304,7 +317,7 @@ const Students: React.FC<StudentsPageProps> = ({
 
       <div className="bg-gray-800 rounded-lg p-4 mb-6 flex justify-between items-center min-h-[72px]">
           <div className="flex items-center gap-4">
-              <span className="text-white font-medium">{selectedIds.length}명 선택됨</span>
+              <span className="text-white font-medium">{selectedIds.size}명 선택됨</span>
               <div className="relative">
                   <input
                       type="text"
@@ -328,13 +341,13 @@ const Students: React.FC<StudentsPageProps> = ({
               </button>
               <button 
                   onClick={handleDeselectAllClick}
-                  disabled={selectedIds.length === 0}
+                  disabled={selectedIds.size === 0}
                   className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-sm">
                   선택 취소
               </button>
               <button 
                   onClick={handleDeleteSelected}
-                  disabled={selectedIds.length === 0}
+                  disabled={selectedIds.size === 0}
                   className="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed text-sm">
                   선택 항목 삭제
               </button>
@@ -346,6 +359,7 @@ const Students: React.FC<StudentsPageProps> = ({
             {viewingStudent ? (
                 <StudentDetailView
                   student={viewingStudent}
+                  allStudents={students}
                   onClose={() => setViewingStudent(null)}
                   onEdit={handleEditStudent}
                   monthlyReports={monthlyReports}
@@ -392,7 +406,7 @@ const Students: React.FC<StudentsPageProps> = ({
                         <td className="w-4 p-4">
                             <div className="flex items-center">
                                 <input id={`checkbox-${student.id}`} type="checkbox"
-                                    checked={selectedIds.includes(student.id)}
+                                    checked={selectedIds.has(student.id)}
                                     onChange={() => handleSelectItem(student.id)}
                                     onClick={(e) => e.stopPropagation()}
                                     className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600 focus:ring-2" />
