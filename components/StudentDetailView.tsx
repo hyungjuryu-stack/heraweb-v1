@@ -20,47 +20,72 @@ const ReportList: React.FC<{ studentId: number, monthlyReports: MonthlyReport[] 
     const studentReports = monthlyReports.filter(r => r.studentId === studentId)
         .sort((a, b) => new Date(b.sentDate).getTime() - new Date(a.sentDate).getTime());
     
-    if (studentReports.length === 0) {
+    const totalCount = studentReports.length;
+
+    if (totalCount === 0) {
         return <div className="text-center text-gray-500 py-4">리포트 기록이 없습니다.</div>;
     }
 
+    const recentReports = studentReports.slice(0, 3);
+
     return (
-        <div className="space-y-3">
-            {studentReports.map(report => (
-                <div key={report.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
-                    <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-200">{report.period}</span>
-                         <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            report.sentStatus === '발송완료' 
-                            ? 'bg-green-500/20 text-green-300' 
-                            : 'bg-gray-500/20 text-gray-400'
-                        }`}>{report.sentStatus}</span>
+        <div className="p-2">
+            <div className="flex justify-between items-center mb-3 px-1">
+                <h4 className="text-md font-bold text-gray-200">최근 리포트</h4>
+                <span className="text-sm text-gray-400">총 {totalCount}회 발행</span>
+            </div>
+            <div className="space-y-3">
+                {recentReports.map(report => (
+                    <div key={report.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="font-bold text-gray-200">{report.period}</span>
+                             <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                report.sentStatus === '발송완료' 
+                                ? 'bg-green-500/20 text-green-300' 
+                                : 'bg-gray-500/20 text-gray-400'
+                            }`}>{report.sentStatus}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">
+                            {report.sentStatus === '발송완료' ? `발송일: ${report.sentDate}` : '미발송'}
+                        </p>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">발송일: {report.sentDate}</p>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
 
 const TuitionList: React.FC<{ studentId: number, tuitions: Tuition[] }> = ({ studentId, tuitions }) => {
-    const studentTuitions = tuitions.filter(t => t.studentId === studentId);
-    if (studentTuitions.length === 0) {
+    const studentTuitions = tuitions.filter(t => t.studentId === studentId)
+        .sort((a, b) => b.month.localeCompare(a.month));
+
+    const totalCount = studentTuitions.length;
+
+    if (totalCount === 0) {
         return <div className="text-center text-gray-500 py-4">수강료 내역이 없습니다.</div>;
     }
+
+    const recentTuitions = studentTuitions.slice(0, 3);
+
     return (
-        <div className="space-y-3">
-            {studentTuitions.map(tuition => (
-                <div key={tuition.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
-                     <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-200">{tuition.month} 수강료</span>
-                        <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                            tuition.paymentStatus === '결제완료' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
-                        }`}>{tuition.paymentStatus}</span>
+        <div className="p-2">
+            <div className="flex justify-between items-center mb-3 px-1">
+                <h4 className="text-md font-bold text-gray-200">최근 수강료 내역</h4>
+                <span className="text-sm text-gray-400">총 {totalCount}건</span>
+            </div>
+            <div className="space-y-3">
+                {recentTuitions.map(tuition => (
+                    <div key={tuition.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
+                         <div className="flex justify-between items-center">
+                            <span className="font-bold text-gray-200">{tuition.month} 수강료</span>
+                            <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                                tuition.paymentStatus === '결제완료' ? 'bg-green-500/20 text-green-300' : 'bg-red-500/20 text-red-300'
+                            }`}>{tuition.paymentStatus}</span>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">금액: {tuition.finalFee.toLocaleString()}원</p>
                     </div>
-                    <p className="text-xs text-gray-400 mt-1">금액: {tuition.finalFee.toLocaleString()}원</p>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
@@ -68,20 +93,32 @@ const TuitionList: React.FC<{ studentId: number, tuitions: Tuition[] }> = ({ stu
 const CounselingList: React.FC<{ studentId: number, counselings: Counseling[], teacherMap: Map<number, string> }> = ({ studentId, counselings, teacherMap }) => {
     const studentCounselings = counselings.filter(c => c.studentId === studentId)
         .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-    if (studentCounselings.length === 0) {
+    
+    const totalCount = studentCounselings.length;
+
+    if (totalCount === 0) {
         return <div className="text-center text-gray-500 py-4">상담 기록이 없습니다.</div>;
     }
+
+    const recentCounselings = studentCounselings.slice(0, 3);
+
     return (
-        <div className="space-y-3">
-            {studentCounselings.map(counsel => (
-                <div key={counsel.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
-                    <div className="flex justify-between items-center">
-                        <span className="font-bold text-gray-200">{counsel.date}</span>
-                        <span className="text-gray-400 text-xs">{teacherMap.get(counsel.teacherId)}</span>
+        <div className="p-2">
+            <div className="flex justify-between items-center mb-3 px-1">
+                <h4 className="text-md font-bold text-gray-200">최근 상담 기록</h4>
+                <span className="text-sm text-gray-400">총 {totalCount}건</span>
+            </div>
+            <div className="space-y-3">
+                {recentCounselings.map(counsel => (
+                    <div key={counsel.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
+                        <div className="flex justify-between items-center">
+                            <span className="font-bold text-gray-200">{counsel.date}</span>
+                            <span className="text-gray-400 text-xs">{teacherMap.get(counsel.teacherId)}</span>
+                        </div>
+                        <p className="text-gray-300 mt-2 truncate">{counsel.content}</p>
                     </div>
-                    <p className="text-gray-300 mt-2 truncate">{counsel.content}</p>
-                </div>
-            ))}
+                ))}
+            </div>
         </div>
     );
 };
