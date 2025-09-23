@@ -180,7 +180,7 @@ const Students: React.FC<StudentsPageProps> = ({
     setSelectedStudent(null);
   };
 
-  const handleSaveStudent = (studentData: Omit<Student, 'id' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }) => {
+  const handleSaveStudent = (studentData: Omit<Student, 'id' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }, transferDate: string) => {
     let updatedStudent: Student;
     const originalStudent = students.find(s => s.id === studentData.id);
 
@@ -204,6 +204,35 @@ const Students: React.FC<StudentsPageProps> = ({
             lessonSummaries: [],
         };
         setStudents([...students, updatedStudent]);
+    }
+
+    // --- LOGIC FOR CLASS TRANSFER ---
+    if (originalStudent && (originalStudent.regularClassId !== studentData.regularClassId || originalStudent.advancedClassId !== studentData.advancedClassId)) {
+        const changes = [];
+        if (originalStudent.regularClassId !== studentData.regularClassId) {
+            const oldClassName = originalStudent.regularClassId ? classMap.get(originalStudent.regularClassId) : '미배정';
+            const newClassName = studentData.regularClassId ? classMap.get(studentData.regularClassId) : '미배정';
+            changes.push(`정규반: '${oldClassName}'에서 '${newClassName}'으로 이동`);
+        }
+        if (originalStudent.advancedClassId !== studentData.advancedClassId) {
+            const oldClassName = originalStudent.advancedClassId ? classMap.get(originalStudent.advancedClassId) : '미배정';
+            const newClassName = studentData.advancedClassId ? classMap.get(studentData.advancedClassId) : '미배정';
+            changes.push(`심화반: '${oldClassName}'에서 '${newClassName}'으로 이동`);
+        }
+        
+        if (changes.length > 0) {
+            const newCounselingRecord: Counseling = {
+                id: Date.now(),
+                date: transferDate,
+                studentId: originalStudent.id,
+                parentName: originalStudent.motherName, // Default to mother
+                teacherId: studentData.teacherId || 0, // new teacher
+                content: changes.join('\n'),
+                followUp: '시스템 자동 기록',
+                type: '반 이동',
+            };
+            setCounselings(prev => [...prev, newCounselingRecord].sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()));
+        }
     }
 
     const originalRegularClassId = originalStudent ? originalStudent.regularClassId : null;

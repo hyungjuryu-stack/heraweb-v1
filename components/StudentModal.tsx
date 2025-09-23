@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Student, Class, Teacher } from '../types';
 import { StudentStatus } from '../types';
@@ -6,7 +7,7 @@ import Card from './ui/Card';
 interface StudentModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSave: (student: Omit<Student, 'id' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }) => void;
+  onSave: (student: Omit<Student, 'id' | 'avgScore' | 'attendanceRate' | 'homeworkRate'> & { id?: number }, transferDate: string) => void;
   student: Student | null;
   allStudents: Student[];
   classes: Class[];
@@ -40,6 +41,8 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
       diagnosticTestNotes: '',
   });
   const [idError, setIdError] = useState<string | null>(null);
+  const [initialClassIds, setInitialClassIds] = useState<{ regular: number | null, advanced: number | null }>({ regular: null, advanced: null });
+  const [transferDate, setTransferDate] = useState('');
 
   const regularClasses = useMemo(() => classes.filter(c => !c.name.startsWith('수')), [classes]);
   const advancedClasses = useMemo(() => classes.filter(c => c.name.startsWith('수')), [classes]);
@@ -69,6 +72,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
         diagnosticTestScore: student.diagnosticTestScore ?? null,
         diagnosticTestNotes: student.diagnosticTestNotes || '',
       });
+      setInitialClassIds({ regular: student.regularClassId, advanced: student.advancedClassId });
     } else {
        setFormData({
             attendanceId: '',
@@ -93,7 +97,9 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
             diagnosticTestScore: null,
             diagnosticTestNotes: '',
         });
+        setInitialClassIds({ regular: null, advanced: null });
     }
+    setTransferDate(new Date().toISOString().split('T')[0]);
     setIdError(null);
   }, [student, isOpen]);
 
@@ -149,10 +155,14 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
     }
   };
 
+  const isClassChanged = useMemo(() => {
+    return formData.regularClassId !== initialClassIds.regular || formData.advancedClassId !== initialClassIds.advanced;
+  }, [formData.regularClassId, formData.advancedClassId, initialClassIds]);
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isSaveDisabled) return;
-    onSave({ ...formData, id: student?.id });
+    onSave({ ...formData, id: student?.id }, transferDate);
   };
 
   if (!isOpen) return null;
@@ -256,6 +266,21 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
                         {teachers.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
                     </select>
                   </div>
+                  {isClassChanged && (
+                      <div>
+                          <label htmlFor="transferDate" className="block text-sm font-medium text-gray-300 mb-1">이동일</label>
+                          <input 
+                              type="date" 
+                              name="transferDate" 
+                              id="transferDate" 
+                              value={transferDate} 
+                              onChange={(e) => setTransferDate(e.target.value)} 
+                              required 
+                              className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]" 
+                          />
+                          <p className="mt-1 text-xs text-gray-400">반 변경 사항은 선택한 이동일에 반영된 것으로 기록됩니다.</p>
+                      </div>
+                  )}
                 </div>
                 
                 {/* Column 3 */}
