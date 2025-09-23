@@ -17,7 +17,8 @@ import {
     ClockIcon,
     LogoutIcon,
     SettingsIcon,
-    ManualIcon
+    ManualIcon,
+    MessagingIcon
 } from './Icons';
 import type { Page, User } from '../types';
 
@@ -58,6 +59,7 @@ const Sidebar: React.FC<SidebarProps> = ({ currentPage, setCurrentPage, user, on
     { page: 'class-attendance', label: '수업 출석부', icon: <ClassAttendanceIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'reports', label: '리포트 관리', icon: <ReportsIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'counseling', label: '상담 기록', icon: <CounselingIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
+    { page: 'messaging', label: '문자 발송', icon: <MessagingIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'students', label: '학생 관리', icon: <StudentsIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'classes', label: '반/수업 관리', icon: <ClassesIcon />, allowedRoles: ['admin', 'operator', 'teacher'] },
     { page: 'teachers', label: '강사 관리', icon: <TeacherIcon />, allowedRoles: ['admin', 'operator'] },

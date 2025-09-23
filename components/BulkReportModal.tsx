@@ -98,7 +98,7 @@ const BulkReportModal: React.FC<BulkReportModalProps> = ({ isOpen, onClose, onGe
         let successCount = 0;
         let failedCount = 0;
 
-        const reportGenerationPromises = eligibleStudents.map(async (student) => {
+        const reportGenerationPromises = eligibleStudents.map(async (student): Promise<MonthlyReport | null> => {
             if (existingReportsForPeriod.has(student.id)) {
                 skippedCount++;
                 return null;
@@ -122,7 +122,7 @@ const BulkReportModal: React.FC<BulkReportModalProps> = ({ isOpen, onClose, onGe
                     sentDate: '',
                     teacherId: student.teacherId || 0,
                     reviewText,
-                    sentStatus: '미발송' as '미발송',
+                    sentStatus: '미발송',
                 };
             } catch (error) {
                 console.error(`AI 리뷰 생성 실패 (학생: ${student.name}):`, error);
@@ -137,7 +137,7 @@ const BulkReportModal: React.FC<BulkReportModalProps> = ({ isOpen, onClose, onGe
                     sentDate: '',
                     teacherId: student.teacherId || 0,
                     reviewText: 'AI 리뷰 생성에 실패했습니다. 데이터를 확인하고 수동으로 작성해주세요.',
-                    sentStatus: '미발송' as '미발송',
+                    sentStatus: '미발송',
                 };
             }
         });

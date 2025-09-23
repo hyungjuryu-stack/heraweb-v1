@@ -17,6 +17,7 @@ import Teachers from './pages/Teachers';
 import LoginPage from './pages/LoginPage';
 import MyPage from './pages/MyPage';
 import UserManual from './pages/UserManual';
+import Messaging from './pages/Messaging';
 import { useMockData } from './hooks/useMockData';
 import { useAuth } from './hooks/useAuth';
 import type { Page } from './types';
@@ -99,6 +100,8 @@ const App: React.FC = () => {
                 return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} classes={data.classes} />;
             case 'counseling':
                 return <Counseling counselings={data.counselings} setCounselings={data.setCounselings} students={data.students} teachers={data.teachers} />;
+            case 'messaging':
+                return <Messaging students={data.students} classes={data.classes} />;
             case 'schedule':
                 return <Schedule academyEvents={data.academyEvents} setAcademyEvents={data.setAcademyEvents} />;
             case 'daily-schedule':

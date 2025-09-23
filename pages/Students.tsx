@@ -89,7 +89,7 @@ const Students: React.FC<StudentsPageProps> = ({
     }
     return filteredStudents;
   }, [students, sortConfig, searchTerm, classMap]);
-
+  
   useEffect(() => {
       setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);

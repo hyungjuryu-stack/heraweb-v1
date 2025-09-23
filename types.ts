@@ -182,6 +182,7 @@ export type Page =
   | 'reports'
   | 'tuition'
   | 'counseling'
+  | 'messaging'
   | 'schedule'
   | 'daily-schedule'
   | 'meeting-notes'
