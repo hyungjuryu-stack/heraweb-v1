@@ -83,8 +83,8 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
             
             if (prevTuition) {
-                // FIX: Cloned prevTuition using spread syntax to ensure correct type inference for copiedData.
-                const copiedData = { ...prevTuition };
+                // FIX: Use spread syntax to clone prevTuition for better type inference.
+                const copiedData: Tuition = { ...prevTuition };
 
                 copiedData.id = `${student.id}-${selectedMonth}`;
                 copiedData.month = selectedMonth;

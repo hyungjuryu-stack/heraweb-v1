@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import type { MonthlyReport, Student, Teacher, LessonRecord, Class } from '../types';
@@ -7,6 +6,7 @@ import ReportPreviewModal from '../components/ReportPreviewModal';
 import { generateReportAsPdf } from '../services/pdfService';
 import ReportPDF from '../components/ReportPDF';
 import { PdfIcon } from '../components/Icons';
+import BulkReportModal from '../components/BulkReportModal';
 
 const SentStatusBadge: React.FC<{ status: MonthlyReport['sentStatus'] }> = ({ status }) => {
     const colorMap = {
@@ -28,6 +28,7 @@ interface ReportsPageProps {
 const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports, students, teachers, lessonRecords, classes }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const [selectedReport, setSelectedReport] = useState<MonthlyReport | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'sentDate', direction: 'descending' });
   const [selectedIds, setSelectedIds] = useState<number[]>([]);
@@ -206,6 +207,14 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
     }
     handleCloseModal();
   };
+  
+  const handleBulkReportsCreated = (newReports: MonthlyReport[]) => {
+    setMonthlyReports(prevReports => {
+        const existingReportIds = new Set(prevReports.map(r => r.id));
+        const uniqueNewReports = newReports.filter(r => !existingReportIds.has(r.id));
+        return [...prevReports, ...uniqueNewReports];
+    });
+  };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
       if (e.target.checked) {
@@ -262,9 +271,20 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">리포트 관리</h1>
-        <button onClick={handleAddNewReport} className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors">
-          신규 리포트 작성
-        </button>
+        <div className="flex items-center gap-2">
+            <button 
+                onClick={() => setIsBulkModalOpen(true)} 
+                className="bg-gray-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-gray-500 transition-colors"
+            >
+              월별 리포트 일괄 생성
+            </button>
+            <button 
+                onClick={handleAddNewReport} 
+                className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors"
+            >
+              신규 리포트 작성
+            </button>
+        </div>
       </div>
 
       <div className="bg-gray-800 rounded-lg p-4 mb-6 flex flex-col md:flex-row justify-between items-center gap-4">
@@ -473,6 +493,16 @@ const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports
           </div>
         )}
       </div>
+
+      <BulkReportModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        onGenerate={handleBulkReportsCreated}
+        students={students}
+        lessonRecords={lessonRecords}
+        monthlyReports={monthlyReports}
+        teachers={teachers}
+      />
     </div>
   );
 };

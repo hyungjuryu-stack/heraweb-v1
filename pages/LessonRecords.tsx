@@ -29,11 +29,11 @@ const NotificationPreviewModal: React.FC<{
     if (record.attendance !== '출석') {
         details.push(record.attendance);
     }
-    // Fix: This comparison appears to be unintentional because the types 'HomeworkGrade' and '"안좋음"' have no overlap.
-    if (poorGrades.includes(record.attitude)) {
+    // Fix: Replaced .includes() with explicit checks to avoid a potential type inference issue.
+    if (record.attitude === 'C' || record.attitude === 'D' || record.attitude === 'F') {
         details.push(`수업태도 미흡(${record.attitude})`);
     }
-    if (poorGrades.includes(record.homework)) {
+    if (record.homework === 'C' || record.homework === 'D' || record.homework === 'F') {
         details.push(`과제 미흡(${record.homework})`);
     }
     const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
