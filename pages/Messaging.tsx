@@ -131,59 +131,57 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
   
   const handleSend = async () => {
     if (!message.trim() || uniqueRecipients.length === 0) return;
+    
     setSendStatus('sending');
     const total = uniqueRecipients.length;
-    setSendProgress({ total, kakaoSuccess: 0, smsSuccess: 0, failed: 0, statusText: '카카오톡 발송 시작...' });
-    
-    let kakaoFailedRecipients: Recipient[] = [];
-    const sentResults: (Recipient & { status: RecipientStatus })[] = [];
+    setSendProgress({ total, kakaoSuccess: 0, smsSuccess: 0, failed: 0, statusText: '백엔드 서버에 발송 요청 중...' });
 
-    // Step 1: Send KakaoTalk
-    for (const recipient of uniqueRecipients) {
-        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate API call latency
-        if (Math.random() > 0.3) { // 70% success rate for Kakao
-            setSendProgress(prev => ({...prev, kakaoSuccess: prev.kakaoSuccess + 1, statusText: `${recipient.name}님에게 카카오톡 발송 성공`}));
-            sentResults.push({ ...recipient, status: 'success_kakao' });
-        } else {
-            kakaoFailedRecipients.push(recipient);
-            setSendProgress(prev => ({...prev, statusText: `${recipient.name}님 카카오톡 발송 실패, SMS 재시도 예정`}));
-        }
-    }
+    try {
+        // 백엔드 API 호출
+        const response = await fetch('http://localhost:3001/api/send-message', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                message: message,
+                recipients: uniqueRecipients,
+            }),
+        });
 
-    // Step 2: Retry with SMS for failed ones
-    if (kakaoFailedRecipients.length > 0) {
-        setSendProgress(prev => ({ ...prev, statusText: `${kakaoFailedRecipients.length}건 SMS로 재발송...` }));
-        for (const recipient of kakaoFailedRecipients) {
-            await new Promise(resolve => setTimeout(resolve, 100));
-             if (Math.random() > 0.1) { // 90% success rate for SMS
-                setSendProgress(prev => ({...prev, smsSuccess: prev.smsSuccess + 1, statusText: `${recipient.name}님에게 SMS 발송 성공`}));
-                sentResults.push({ ...recipient, status: 'success_sms' });
-            } else {
-                setSendProgress(prev => ({...prev, failed: prev.failed + 1, statusText: `${recipient.name}님 SMS 발송 실패`}));
-                sentResults.push({ ...recipient, status: 'failed' });
-            }
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || '서버 통신에 실패했습니다.');
         }
+
+        const result: { sentResults: (Recipient & { status: RecipientStatus })[] } = await response.json();
+        const sentResults = result.sentResults;
+
+        const finalFailedCount = sentResults.filter(r => r.status === 'failed').length;
+        const successCount = sentResults.length - finalFailedCount;
+
+        let finalStatus: HistoryItem['finalStatus'] = 'success';
+        if (finalFailedCount > 0) {
+            finalStatus = finalFailedCount === total ? 'failed' : 'partial_fail';
+        }
+
+        const newHistoryItem: HistoryItem = {
+            id: Date.now(),
+            timestamp: new Date().toLocaleString('ko-KR'),
+            message,
+            recipients: sentResults,
+            finalStatus,
+        };
+        
+        setMessageHistory(prev => [newHistoryItem, ...prev]);
+        setSendProgress({ ...sendProgress, statusText: `발송 완료! (성공 ${successCount}, 실패 ${finalFailedCount})` });
+        setSendStatus(finalStatus === 'success' ? 'success' : 'failed');
+
+    } catch (error: any) {
+        console.error("메시지 발송 오류:", error);
+        setSendProgress(prev => ({ ...prev, statusText: `발송 오류: ${error.message}` }));
+        setSendStatus('failed');
     }
-    
-    // Step 3: Finalize
-    const finalFailedCount = sentResults.filter(r => r.status === 'failed').length;
-    let finalStatus: HistoryItem['finalStatus'] = 'success';
-    if(finalFailedCount > 0) {
-        finalStatus = finalFailedCount === total ? 'failed' : 'partial_fail';
-    }
-    
-    const newHistoryItem: HistoryItem = {
-        id: Date.now(),
-        timestamp: new Date().toLocaleString('ko-KR'),
-        message,
-        recipients: sentResults,
-        finalStatus,
-    };
-    setMessageHistory(prev => [newHistoryItem, ...prev]);
-    
-    const successCount = sentResults.filter(r => r.status.startsWith('success')).length;
-    setSendProgress(prev => ({ ...prev, statusText: `발송 완료! (성공 ${successCount}, 실패 ${finalFailedCount})` }));
-    setSendStatus(finalStatus === 'success' ? 'success' : 'failed'); // Simplified to success/failed for UI feedback
 
     setTimeout(() => {
         setSendStatus('idle');
