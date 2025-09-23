@@ -71,7 +71,7 @@ const Dashboard: React.FC<DashboardProps> = ({ dashboardData, students, classes,
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">헤라매쓰 대시보드</h1>
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-                <Card title="이달의 원생 현황" className="lg:col-span-2">
+                <Card title={`${new Date().toLocaleDateString('ko-KR', { year: 'numeric', month: 'long' })} 원생 현황`} className="lg:col-span-2">
                     <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-center h-full content-start">
                         <div>
                             <h4 className="text-gray-400 text-lg">총 재원생</h4>
