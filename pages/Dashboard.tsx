@@ -1,3 +1,4 @@
+
 import React, { useMemo } from 'react';
 import Card from '../components/ui/Card';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
@@ -8,6 +9,8 @@ interface DashboardProps {
     dashboardData: {
         totalStudents: number;
         consultingStudents: number;
+        newStudentsThisMonth: number;
+        withdrawnStudentsThisMonth: number;
         attendanceToday: { name: string; value: number; fill: string; }[];
         scoreTrends: { name: string; '평균 점수': number; }[];
         schedule: { time: string; event: string; }[];
@@ -20,7 +23,7 @@ interface DashboardProps {
 const COLORS = ['#E5A823', '#F2C94C', '#F2994A', '#EB5757', '#6FCF97', '#56CCF2', '#BB6BD9'];
 const RADIAN = Math.PI / 180;
 
-const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent }: any) => {
+const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }: any) => {
   const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
   const x = cx + radius * Math.cos(-midAngle * RADIAN);
   const y = cy + radius * Math.sin(-midAngle * RADIAN);
@@ -29,7 +32,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
 
   return (
     <text x={x} y={y} fill="white" textAnchor={x > cx ? 'start' : 'end'} dominantBaseline="central" fontSize="12">
-      {`${(percent * 100).toFixed(0)}%`}
+      {`${value}명 (${(percent * 100).toFixed(0)}%)`}
     </text>
   );
 };
@@ -68,13 +71,25 @@ const Dashboard: React.FC<DashboardProps> = ({ dashboardData, students, classes,
         <div>
             <h1 className="text-3xl font-bold text-white mb-6">헤라매쓰 대시보드</h1>
             <div className="grid grid-cols-1 lg:grid-cols-6 gap-6">
-                <Card className="lg:col-span-1 flex flex-col justify-center items-center">
-                    <h4 className="text-gray-400 text-lg">총 재원생</h4>
-                    <p className="text-5xl font-bold text-[#E5A823] mt-2">{dashboardData.totalStudents}</p>
-                </Card>
-                <Card className="lg:col-span-1 flex flex-col justify-center items-center">
-                    <h4 className="text-gray-400 text-lg">상담/대기</h4>
-                    <p className="text-5xl font-bold text-white mt-2">{dashboardData.consultingStudents}</p>
+                <Card title="이달의 원생 현황" className="lg:col-span-2">
+                    <div className="grid grid-cols-2 gap-x-4 gap-y-6 text-center h-full content-start">
+                        <div>
+                            <h4 className="text-gray-400 text-lg">총 재원생</h4>
+                            <p className="text-4xl font-bold text-[#E5A823] mt-1">{dashboardData.totalStudents}</p>
+                        </div>
+                        <div>
+                            <h4 className="text-gray-400 text-lg">신규</h4>
+                            <p className="text-4xl font-bold text-white mt-1">{dashboardData.newStudentsThisMonth}</p>
+                        </div>
+                        <div>
+                            <h4 className="text-gray-400 text-lg">퇴원</h4>
+                            <p className="text-4xl font-bold text-white mt-1">{dashboardData.withdrawnStudentsThisMonth}</p>
+                        </div>
+                        <div>
+                            <h4 className="text-gray-400 text-lg">상담/대기</h4>
+                            <p className="text-4xl font-bold text-white mt-1">{dashboardData.consultingStudents}</p>
+                        </div>
+                    </div>
                 </Card>
                 <Card title="오늘 출결 현황" className="lg:col-span-2">
                     <ResponsiveContainer width="100%" height={120}>

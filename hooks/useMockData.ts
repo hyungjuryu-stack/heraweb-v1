@@ -438,10 +438,25 @@ export const useMockData = () => {
     const [academyEvents, setAcademyEvents] = useState<AcademyEvent[]>(initialAcademyEvents);
     const [meetingNotes, setMeetingNotes] = useState<MeetingNote[]>(initialMeetingNotes);
 
+    const today = new Date(2025, 8, 15);
+    const startOfMonth = new Date(today.getFullYear(), today.getMonth(), 1);
+
+    const newStudentsThisMonth = students.filter(s => {
+        const enrollmentDate = new Date(s.enrollmentDate);
+        return enrollmentDate >= startOfMonth && enrollmentDate <= today;
+    }).length;
+
+    const withdrawnStudentsThisMonth = students.filter(s => {
+        if (!s.withdrawalDate) return false;
+        const withdrawalDate = new Date(s.withdrawalDate);
+        return withdrawalDate >= startOfMonth && withdrawalDate <= today;
+    }).length;
 
     const dashboardData = {
         totalStudents: students.filter(s => s.status === StudentStatus.ENROLLED).length,
         consultingStudents: students.filter(s => s.status === StudentStatus.CONSULTING || s.status === StudentStatus.WAITING).length,
+        newStudentsThisMonth,
+        withdrawnStudentsThisMonth,
         attendanceToday: [
             { name: '출석', value: 68, fill: '#E5A823' },
             { name: '결석', value: 2, fill: '#6b7280' },

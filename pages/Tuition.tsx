@@ -83,8 +83,8 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
             
             if (prevTuition) {
-                // FIX: Replaced spread with `Object.assign` to fix a "Spread types may only be created from object types" error.
-                const copiedData: Tuition = Object.assign({}, prevTuition);
+                // FIX: Replaced Object.assign with the spread operator for cleaner object cloning.
+                const copiedData: Tuition = { ...prevTuition };
 
                 copiedData.id = `${student.id}-${selectedMonth}`;
                 copiedData.month = selectedMonth;
