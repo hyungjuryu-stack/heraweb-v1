@@ -74,6 +74,7 @@ const App: React.FC = () => {
                     monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports}
                     tuitions={data.tuitions} setTuitions={data.setTuitions}
                     counselings={data.counselings} setCounselings={data.setCounselings}
+                    lessonRecords={data.lessonRecords}
                     setLessonRecords={data.setLessonRecords}
                  />;
             case 'classes':
@@ -85,7 +86,6 @@ const App: React.FC = () => {
                     lessonRecords={data.lessonRecords} 
                     setLessonRecords={data.setLessonRecords} 
                     students={data.students}
-                    setStudents={data.setStudents}
                     classes={data.classes} 
                     teachers={data.teachers} 
                 />;

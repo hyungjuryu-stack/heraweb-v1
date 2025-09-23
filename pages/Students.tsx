@@ -5,6 +5,7 @@ import type { Student, Class, Teacher, LessonRecord, MonthlyReport, Tuition, Cou
 import { StudentStatus } from '../types';
 import StudentModal from '../components/StudentModal';
 import StudentDetailView from '../components/StudentDetailView';
+import ConfirmationModal from '../components/ConfirmationModal';
 
 const StudentStatusBadge: React.FC<{ status: Student['status'] }> = ({ status }) => {
     const colorMap = {
@@ -22,6 +23,7 @@ interface StudentsPageProps {
   classes: Class[];
   setClasses: React.Dispatch<React.SetStateAction<Class[]>>;
   teachers: Teacher[];
+  lessonRecords: LessonRecord[];
   setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
   setMonthlyReports: React.Dispatch<React.SetStateAction<MonthlyReport[]>>;
   setTuitions: React.Dispatch<React.SetStateAction<Tuition[]>>;
@@ -35,6 +37,7 @@ const Students: React.FC<StudentsPageProps> = ({
   students, setStudents,
   classes, setClasses,
   teachers,
+  lessonRecords,
   setLessonRecords,
   setMonthlyReports,
   setTuitions,
@@ -51,6 +54,7 @@ const Students: React.FC<StudentsPageProps> = ({
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
   const headerCheckboxRef = React.useRef<HTMLInputElement>(null);
+  const [summaryToDelete, setSummaryToDelete] = useState<number | null>(null);
 
   const [viewingStudent, setViewingStudent] = useState<Student | null>(null);
   
@@ -248,20 +252,32 @@ const Students: React.FC<StudentsPageProps> = ({
     }
   };
 
-  const handleDeleteSummary = (studentId: number, summaryId: number) => {
-    if (!window.confirm("이 AI 요약을 삭제하시겠습니까?")) return;
+  const requestDeleteSummary = (summaryId: number) => {
+    setSummaryToDelete(summaryId);
+  };
+
+  const handleConfirmDeleteSummary = () => {
+    if (!summaryToDelete || !viewingStudent) return;
+    
+    const studentId = viewingStudent.id;
+    const summaryId = summaryToDelete;
+    
     setStudents(prevStudents => {
         const newStudents = prevStudents.map(s => {
             if (s.id === studentId) {
                 const updatedSummaries = s.lessonSummaries?.filter(summary => summary.id !== summaryId);
                 const updatedStudent = { ...s, lessonSummaries: updatedSummaries };
-                if (viewingStudent?.id === studentId) setViewingStudent(updatedStudent);
+                if (viewingStudent?.id === studentId) {
+                    setViewingStudent(updatedStudent);
+                }
                 return updatedStudent;
             }
             return s;
         });
         return newStudents;
     });
+
+    setSummaryToDelete(null);
   };
 
   const handleSelectAll = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -393,7 +409,9 @@ const Students: React.FC<StudentsPageProps> = ({
                   counselings={counselings}
                   teacherMap={teacherMap}
                   onSaveAnalysis={handleSaveAnalysis}
-                  onDeleteSummary={(summaryId) => viewingStudent && handleDeleteSummary(viewingStudent.id, summaryId)}
+                  onDeleteSummary={requestDeleteSummary}
+                  lessonRecords={lessonRecords}
+                  setStudents={setStudents}
                 />
             ) : (
                 <Card className="flex items-center justify-center h-24">
@@ -558,6 +576,14 @@ const Students: React.FC<StudentsPageProps> = ({
         classes={classes}
         teachers={teachers}
       />
+      <ConfirmationModal
+        isOpen={!!summaryToDelete}
+        onClose={() => setSummaryToDelete(null)}
+        onConfirm={handleConfirmDeleteSummary}
+        title="AI 요약 삭제 확인"
+      >
+        <p>이 AI 요약 기록을 정말로 삭제하시겠습니까? 이 작업은 되돌릴 수 없습니다.</p>
+      </ConfirmationModal>
     </div>
   );
 };

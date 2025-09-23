@@ -81,8 +81,9 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const hasEnrolledSibling = student.siblings.some(siblingId => eligibleStudentIds.has(siblingId));
             const shouldApplyDiscount = hasEnrolledSibling && student.id > (student.siblings[0] || 0);
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
-
+            
             if (prevTuition) {
+                // FIX: Cloned prevTuition using spread syntax to ensure correct type inference for copiedData.
                 const copiedData = { ...prevTuition };
 
                 copiedData.id = `${student.id}-${selectedMonth}`;

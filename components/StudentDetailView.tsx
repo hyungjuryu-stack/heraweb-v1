@@ -1,9 +1,10 @@
-
 import React, { useState } from 'react';
 import Card from './ui/Card';
-import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis, LessonSummary } from '../types';
+import type { Student, MonthlyReport, Tuition, Counseling, TrendAnalysis, LessonSummary, LessonRecord } from '../types';
 import { ReportsIcon, TuitionIcon, CounselingIcon, AnalysisIcon, ClockIcon, SummariesIcon } from './Icons';
 import TrendAnalysisView from './TrendAnalysisModal';
+import { generateLessonSummary } from '../services/geminiService';
+import LessonSummaryModal from './LessonSummaryModal';
 
 interface StudentDetailViewProps {
   student: Student;
@@ -16,6 +17,8 @@ interface StudentDetailViewProps {
   teacherMap: Map<number, string>;
   onSaveAnalysis: (studentId: number, analysis: TrendAnalysis) => void;
   onDeleteSummary: (summaryId: number) => void;
+  lessonRecords: LessonRecord[];
+  setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
 }
 
 const ReportList: React.FC<{ studentId: number, monthlyReports: MonthlyReport[] }> = ({ studentId, monthlyReports }) => {
@@ -184,32 +187,124 @@ const StudyPeriodView: React.FC<{ student: Student }> = ({ student }) => {
     );
 };
 
-const SummaryList: React.FC<{ student: Student; onDelete: (summaryId: number) => void; }> = ({ student, onDelete }) => {
+const SummaryList: React.FC<{ 
+    student: Student; 
+    onDelete: (summaryId: number) => void;
+    lessonRecords: LessonRecord[];
+    setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
+}> = ({ student, onDelete, lessonRecords, setStudents }) => {
+    const [startDate, setStartDate] = useState('');
+    const [endDate, setEndDate] = useState('');
+    const [isSummaryModalOpen, setSummaryModalOpen] = useState(false);
+    const [summaryText, setSummaryText] = useState<string | null>(null);
+    const [isGeneratingSummary, setGeneratingSummary] = useState(false);
+    const [summaryError, setSummaryError] = useState<string | null>(null);
+    const [userMessage, setUserMessage] = useState<string | null>(null);
+
+    const handleGenerateSummary = async () => {
+        const recordsForSummary = lessonRecords.filter(r => {
+            if (r.studentId !== student.id) return false;
+            const recordDate = r.date;
+            const startDateMatch = startDate ? recordDate >= startDate : true;
+            const endDateMatch = endDate ? recordDate <= endDate : true;
+            return startDateMatch && endDateMatch;
+        });
+
+        if (recordsForSummary.length === 0) {
+            setUserMessage("요약할 수업 기록이 없습니다. 기간을 확인해주세요.");
+            setTimeout(() => setUserMessage(null), 3000);
+            return;
+        }
+
+        setSummaryText(null);
+        setSummaryError(null);
+        setGeneratingSummary(true);
+        setSummaryModalOpen(true);
+
+        try {
+            const summary = await generateLessonSummary(student, recordsForSummary, { startDate, endDate });
+            setSummaryText(summary);
+
+            const periodString = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간';
+            const newSummary: LessonSummary = {
+                id: Date.now(),
+                period: periodString,
+                summary: summary,
+                generatedDate: new Date().toISOString().split('T')[0],
+            };
+
+            setStudents(prevStudents => 
+                prevStudents.map(s => {
+                    if (s.id === student.id) {
+                        return {
+                            ...s,
+                            lessonSummaries: [...(s.lessonSummaries || []), newSummary],
+                        };
+                    }
+                    return s;
+                })
+            );
+
+        } catch (e: any) {
+            setSummaryError(e.message);
+        } finally {
+            setGeneratingSummary(false);
+        }
+    };
+
     const summaries = student.lessonSummaries || [];
 
-    if (summaries.length === 0) {
-        return <div className="text-center text-gray-500 py-4">저장된 AI 요약 기록이 없습니다.</div>;
-    }
-
     return (
-        <div className="p-2 space-y-3">
-            {summaries.sort((a,b) => b.generatedDate.localeCompare(a.generatedDate)).map(summary => (
-                <div key={summary.id} className="bg-gray-800/50 p-3 rounded-md text-sm">
-                    <div className="flex justify-between items-start">
-                        <div>
-                            <p className="font-bold text-gray-200">분석 기간: {summary.period}</p>
-                            <p className="text-xs text-gray-400 mt-1">생성일: {summary.generatedDate}</p>
-                        </div>
-                        <button 
-                            onClick={() => onDelete(summary.id)}
-                            className="text-red-400 hover:text-red-300 text-xs font-semibold"
-                        >
-                            삭제
-                        </button>
-                    </div>
-                    <p className="text-gray-300 mt-2 whitespace-pre-wrap">{summary.summary}</p>
+        <div className="p-2 space-y-4">
+             <div className="bg-gray-800/50 p-3 rounded-lg space-y-3">
+                <h4 className="text-md font-bold text-gray-200">AI 요약 생성</h4>
+                <div className="flex items-center gap-2">
+                    <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg py-1 px-2 text-white text-sm w-full" placeholder="시작일"/>
+                    <span className="text-gray-400">-</span>
+                    <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} className="bg-gray-700 border border-gray-600 rounded-lg py-1 px-2 text-white text-sm w-full" placeholder="종료일"/>
                 </div>
-            ))}
+                 <button
+                    onClick={handleGenerateSummary}
+                    disabled={isGeneratingSummary}
+                    className="w-full bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-yellow-500 transition-colors disabled:bg-yellow-800/50 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
+                >
+                    {isGeneratingSummary ? '생성 중...' : '선택 기간으로 AI 요약 생성'}
+                </button>
+                {userMessage && <p className="text-center text-yellow-400 text-xs mt-2">{userMessage}</p>}
+            </div>
+            
+            {summaries.length === 0 ? (
+                <div className="text-center text-gray-500 py-4">저장된 AI 요약 기록이 없습니다.</div>
+            ) : (
+                <div className="space-y-3 max-h-[30vh] overflow-y-auto pr-2">
+                    {summaries.sort((a,b) => b.generatedDate.localeCompare(a.generatedDate)).map(summary => (
+                        <div key={summary.id} className="bg-gray-800/50 p-3 rounded-md text-sm group relative">
+                            <div className="flex justify-between items-start">
+                                <div>
+                                    <p className="font-bold text-gray-200">분석 기간: {summary.period}</p>
+                                    <p className="text-xs text-gray-400 mt-1">생성일: {summary.generatedDate}</p>
+                                </div>
+                                <button 
+                                    onClick={() => onDelete(summary.id)}
+                                    className="text-red-400 hover:text-red-300 text-xs font-semibold opacity-0 group-hover:opacity-100 transition-opacity absolute top-2 right-2"
+                                >
+                                    삭제
+                                </button>
+                            </div>
+                            <p className="text-gray-300 mt-2 whitespace-pre-wrap">{summary.summary}</p>
+                        </div>
+                    ))}
+                </div>
+            )}
+            <LessonSummaryModal
+                isOpen={isSummaryModalOpen}
+                onClose={() => setSummaryModalOpen(false)}
+                isLoading={isGeneratingSummary}
+                error={summaryError}
+                summary={summaryText}
+                studentName={student.name}
+                periodString={(startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간'}
+            />
         </div>
     );
 };
@@ -225,6 +320,8 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
   teacherMap,
   onSaveAnalysis,
   onDeleteSummary,
+  lessonRecords,
+  setStudents,
 }) => {
   type DetailTab = 'reports' | 'tuition' | 'counseling' | 'analysis' | 'study-period' | 'summaries';
   const [activeDetailTab, setActiveDetailTab] = useState<DetailTab>('reports');
@@ -301,7 +398,7 @@ const StudentDetailView: React.FC<StudentDetailViewProps> = ({
                 onSaveAnalysis={(analysis) => onSaveAnalysis(student.id, analysis)}
             />
         )}
-        {activeDetailTab === 'summaries' && <SummaryList student={student} onDelete={onDeleteSummary} />}
+        {activeDetailTab === 'summaries' && <SummaryList student={student} onDelete={onDeleteSummary} lessonRecords={lessonRecords} setStudents={setStudents} />}
       </div>
     </Card>
   );

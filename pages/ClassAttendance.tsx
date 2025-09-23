@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Class, Student, Teacher, LessonRecord, HomeworkGrade, User } from '../types';
 import { KakaoTalkIcon } from '../components/Icons';
@@ -141,33 +140,51 @@ const NotificationPreviewModal: React.FC<{
     if (!isOpen || !date || !cls) return null;
 
     const dateString = date.toISOString().split('T')[0];
-    const attitudeMap: Record<HomeworkGrade, string> = {
-        A: '매우좋음',
-        B: '좋음',
-        C: '보통',
-        D: '나쁨',
-        F: '매우나쁨'
-    };
+    const poorGrades: HomeworkGrade[] = ['C', 'D', 'F'];
 
-    const studentsToReport = studentsInClass.map(student => {
-        const record = recordsMap.get(`${student.id}-${dateString}`);
-        const details: string[] = [];
+    const studentsToReport = studentsInClass
+        .map(student => {
+            const record = recordsMap.get(`${student.id}-${dateString}`);
+            const details: string[] = [];
+            let isNotifiable = false;
 
-        if (!record) {
-            details.push('결석 (기록 없음)');
-        } else {
-            details.push(record.attendance);
-            details.push(`태도: ${attitudeMap[record.attitude]}(${record.attitude})`);
-            details.push(`과제: ${record.homework}`);
-
-            const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
-            if (scores.length > 0) {
-                details.push(`테스트: ${scores.join(', ')}`);
+            if (!record) {
+                isNotifiable = true;
+                details.push('결석 (기록 없음)');
+            } else {
+                if (record.attendance !== '출석') {
+                    details.push(record.attendance);
+                    isNotifiable = true;
+                }
+                if (poorGrades.includes(record.attitude)) {
+                    details.push(`태도 미흡(${record.attitude})`);
+                    isNotifiable = true;
+                }
+                if (poorGrades.includes(record.homework)) {
+                    details.push(`과제 미흡(${record.homework})`);
+                    isNotifiable = true;
+                }
+                if (poorGrades.includes(record.selfDirectedLearning)) {
+                    details.push(`자기주도 미흡(${record.selfDirectedLearning})`);
+                    isNotifiable = true;
+                }
+                const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
+                if (scores.length > 0) {
+                    details.push(`테스트: ${scores.join(', ')}`);
+                    isNotifiable = true;
+                }
+                if (record.attendance === '출석' && isNotifiable) {
+                     details.unshift('출석');
+                }
             }
-        }
-
-        return { student, details };
-    });
+            
+            return { 
+                student, 
+                isNotifiable, 
+                message: details.join(', ')
+            };
+        })
+        .filter(item => item.isNotifiable);
     
     const allStudentsAttendanceSummary = studentsInClass.reduce(
         (acc, student) => {
@@ -180,6 +197,10 @@ const NotificationPreviewModal: React.FC<{
         },
         { present: 0, late: 0, absent: 0 }
     );
+    
+    const recipientsCount = studentsToReport.filter(({ student }) => 
+        student.motherPhone || (student.sendSmsToBoth && student.fatherPhone)
+    ).length;
 
 
   return (
@@ -199,20 +220,21 @@ const NotificationPreviewModal: React.FC<{
                         </h4>
                     </div>
                     <div className="bg-white p-3 rounded space-y-1 text-sm">
-                       {studentsToReport.map(({ student, details }) => {
+                       {studentsToReport.map(({ student, message }) => {
                            const hasPhone = student.motherPhone || (student.sendSmsToBoth && student.fatherPhone);
                            return (
                                <p key={student.id}>
-                                   - {student.name}: {details.join(', ')}
+                                   - {student.name}: {message}
                                    {!hasPhone && <span className="text-red-500 text-xs ml-2 font-semibold">(연락처 없음)</span>}
                                </p>
                            );
                        })}
                        {studentsToReport.length === 0 && (
-                           <p>수업에 배정된 학생이 없습니다.</p>
+                           <p className="text-gray-500">알림을 발송할 특이사항이 있는 학생이 없습니다.</p>
                        )}
-                        <div className="pt-2 mt-2 border-t border-gray-200 text-xs text-gray-600">
-                           총원 {studentsInClass.length}명: 출석 {allStudentsAttendanceSummary.present}, 지각 {allStudentsAttendanceSummary.late}, 결석 {allStudentsAttendanceSummary.absent}
+                        <div className="pt-2 mt-2 border-t border-gray-200 text-xs text-gray-600 space-y-1">
+                           <p>총원 {studentsInClass.length}명: 출석 {allStudentsAttendanceSummary.present}, 지각 {allStudentsAttendanceSummary.late}, 결석 {allStudentsAttendanceSummary.absent}</p>
+                           <p className="font-bold text-blue-600">발송 대상 학부모: 총 {recipientsCount}명</p>
                         </div>
                     </div>
                 </div>

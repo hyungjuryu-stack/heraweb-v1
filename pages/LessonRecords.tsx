@@ -1,11 +1,8 @@
 
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
-import type { LessonRecord, Student, Class, Teacher, HomeworkGrade, LessonSummary } from '../types';
+import type { LessonRecord, Student, Class, Teacher, HomeworkGrade } from '../types';
 import { KakaoTalkIcon } from '../components/Icons';
-import { generateLessonSummary } from '../services/geminiService';
-import LessonSummaryModal from '../components/LessonSummaryModal';
 
 const AttendanceBadge: React.FC<{ status: LessonRecord['attendance'] }> = ({ status }) => {
     const colorMap = {
@@ -96,12 +93,11 @@ interface LessonRecordsPageProps {
     lessonRecords: LessonRecord[];
     setLessonRecords: React.Dispatch<React.SetStateAction<LessonRecord[]>>;
     students: Student[];
-    setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
     classes: Class[];
     teachers: Teacher[];
 }
 
-const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLessonRecords, students, setStudents, classes, teachers }) => {
+const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLessonRecords, students, classes, teachers }) => {
     const [selectedStudentId, setSelectedStudentId] = useState<number | ''>('');
     const [startDate, setStartDate] = useState('');
     const [endDate, setEndDate] = useState('');
@@ -112,11 +108,6 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
     const [previewRecord, setPreviewRecord] = useState<LessonRecord | null>(null);
     const [currentPage, setCurrentPage] = useState(1);
     const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
-
-    const [isSummaryModalOpen, setSummaryModalOpen] = useState(false);
-    const [summaryText, setSummaryText] = useState<string | null>(null);
-    const [isGeneratingSummary, setGeneratingSummary] = useState(false);
-    const [summaryError, setSummaryError] = useState<string | null>(null);
 
     const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
     const studentObjMap = useMemo(() => new Map(students.map(s => [s.id, s])), [students]);
@@ -297,53 +288,6 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
         }, 1000); 
     };
 
-    const handleGenerateSummary = async () => {
-        if (!selectedStudentId) return;
-        const student = studentObjMap.get(selectedStudentId);
-        if (!student) return;
-    
-        const recordsForSummary = filteredAndSortedRecords.filter(r => r.studentId === selectedStudentId);
-        if (recordsForSummary.length === 0) {
-            alert("요약할 수업 기록이 없습니다. 기간을 확인해주세요.");
-            return;
-        }
-    
-        setSummaryText(null);
-        setSummaryError(null);
-        setGeneratingSummary(true);
-        setSummaryModalOpen(true);
-    
-        try {
-            const summary = await generateLessonSummary(student, recordsForSummary, { startDate, endDate });
-            setSummaryText(summary);
-
-            const periodString = (startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간';
-            const newSummary: LessonSummary = {
-                id: Date.now(),
-                period: periodString,
-                summary: summary,
-                generatedDate: new Date().toISOString().split('T')[0],
-            };
-
-            setStudents(prevStudents => 
-                prevStudents.map(s => {
-                    if (s.id === student.id) {
-                        return {
-                            ...s,
-                            lessonSummaries: [...(s.lessonSummaries || []), newSummary],
-                        };
-                    }
-                    return s;
-                })
-            );
-
-        } catch (e: any) {
-            setSummaryError(e.message);
-        } finally {
-            setGeneratingSummary(false);
-        }
-    };
-
     const headers: { key: string; label: string }[] = [
         { key: 'date', label: '날짜' },
         { key: 'studentId', label: '학생' },
@@ -393,13 +337,6 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                             className="bg-gray-700 border border-gray-600 rounded-lg py-2 px-4 text-white focus:ring-[#E5A823] focus:border-[#E5A823] text-sm"
                         />
                     </div>
-                     <button
-                        onClick={handleGenerateSummary}
-                        disabled={!selectedStudentId || isGeneratingSummary}
-                        className="bg-yellow-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-yellow-500 transition-colors disabled:bg-yellow-800/50 disabled:text-gray-400 disabled:cursor-not-allowed text-sm"
-                    >
-                        AI 요약 생성
-                    </button>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                     <span className="text-white font-medium text-sm mr-2">{`${selectedIds.length} / ${filteredAndSortedRecords.length}개 선택됨`}</span>
@@ -592,16 +529,6 @@ const LessonRecords: React.FC<LessonRecordsPageProps> = ({ lessonRecords, setLes
                 record={previewRecord}
                 student={previewRecord ? studentObjMap.get(previewRecord.studentId) || null : null}
                 className={previewRecord ? (classMap.get(studentObjMap.get(previewRecord.studentId)?.regularClassId || -1) || '수업') : null}
-            />
-
-            <LessonSummaryModal
-                isOpen={isSummaryModalOpen}
-                onClose={() => setSummaryModalOpen(false)}
-                isLoading={isGeneratingSummary}
-                error={summaryError}
-                summary={summaryText}
-                studentName={selectedStudentId ? studentMap.get(selectedStudentId) || '' : ''}
-                periodString={(startDate && endDate) ? `${startDate} ~ ${endDate}` : '전체 기간'}
             />
         </div>
     );

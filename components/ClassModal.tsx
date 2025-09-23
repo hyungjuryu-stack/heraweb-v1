@@ -102,7 +102,8 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
         // Time parsing logic
         if (timeStr && timeStr.includes('-')) {
           const [start, end] = timeStr.split('-');
-          const periodMatch = Object.entries(periodTimes).find(([p, t]) => t.start === start && t.end === end);
+          // FIX: Explicitly type the destructured arguments from Object.entries to resolve `t.start` and `t.end` being of type `unknown`.
+          const periodMatch = Object.entries(periodTimes).find(([p, t]: [string, { start: string; end: string }]) => t.start === start && t.end === end);
           if (periodMatch) {
             setSelectedPeriod(parseInt(periodMatch[0]));
           } else {
@@ -132,7 +133,7 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
         setStudentSchedules([]);
       }
     }
-  }, [classData, isOpen, assignableTeachers]);
+  }, [classData, isOpen, assignableTeachers, periodTimes]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
