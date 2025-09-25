@@ -46,7 +46,7 @@ export interface LessonSummary {
 export interface Class {
   id: number;
   name: string;
-  teacherId: number;
+  teacherIds: number[];
   grade: string[];
   studentIds: number[];
   schedule: string;
@@ -192,6 +192,7 @@ export type Page =
 
 export interface User {
   id: string;
+  teacherId: number;
   name: string;
   role: 'admin' | 'operator' | 'teacher';
   mustChangePassword?: boolean;

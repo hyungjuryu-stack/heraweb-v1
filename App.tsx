@@ -1,8 +1,10 @@
 
+
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Dashboard from './pages/Dashboard';
-import Students from './pages/Students';
+// FIX: Changed to a named import to resolve the "no default export" error.
+import { Students } from './pages/Students';
 import TestGenerator from './pages/TestGenerator';
 import Reports from './pages/Reports';
 import Classes from './pages/Classes';
@@ -28,10 +30,10 @@ const App: React.FC = () => {
     const [currentPage, setCurrentPage] = useState<Page>('dashboard');
 
     useEffect(() => {
-        // This effect handles automatic navigation.
-        // When a user logs in with a temporary password, they are directed to 'mypage'.
         if (auth.user?.mustChangePassword) {
             setCurrentPage('mypage');
+        } else if (!auth.user) {
+            setCurrentPage('dashboard');
         }
     }, [auth.user]);
     
@@ -39,14 +41,12 @@ const App: React.FC = () => {
         return <LoginPage auth={auth} />;
     }
 
-    // If a password change is required, render a locked-down UI that only shows the MyPage component.
-    // Navigation via the sidebar is disabled until the password is changed.
     if (auth.user.mustChangePassword) {
         return (
             <div className="flex h-screen bg-[#0d211c] text-white">
                 <Sidebar 
-                    currentPage="mypage" // Lock the active page display to 'mypage'
-                    setCurrentPage={() => {}} // Disable sidebar navigation
+                    currentPage="mypage"
+                    setCurrentPage={() => {}}
                     user={auth.user} 
                     onLogout={auth.logout} 
                 />
@@ -57,56 +57,81 @@ const App: React.FC = () => {
         );
     }
     
-    // Normal application flow when no password change is required.
+    // Role-based data filtering
+    let pageData = { ...data };
+    if (auth.user.role === 'teacher') {
+        const teacherId = auth.user.teacherId;
+        const teacherClasses = data.classes.filter(c => c.teacherIds.includes(teacherId));
+        const teacherClassIds = new Set(teacherClasses.map(c => c.id));
+        const teacherStudents = data.students.filter(s => 
+            (s.regularClassId && teacherClassIds.has(s.regularClassId)) || 
+            (s.advancedClassId && teacherClassIds.has(s.advancedClassId))
+        );
+        const teacherStudentIds = new Set(teacherStudents.map(s => s.id));
+
+        pageData = {
+            ...data,
+            classes: teacherClasses,
+            students: teacherStudents,
+            lessonRecords: data.lessonRecords.filter(r => teacherStudentIds.has(r.studentId)),
+            monthlyReports: data.monthlyReports.filter(r => teacherStudentIds.has(r.studentId)),
+            counselings: data.counselings.filter(c => teacherStudentIds.has(c.studentId)),
+            // Dashboard data would also need filtering, handled inside the component for simplicity
+        };
+    }
+    
     const renderPage = () => {
         switch (currentPage) {
             case 'dashboard':
                 return <Dashboard 
+                    user={auth.user}
                     dashboardData={data.dashboardData}
-                    students={data.students}
-                    classes={data.classes}
+                    students={pageData.students}
+                    classes={pageData.classes}
                     teachers={data.teachers}
                 />;
             case 'students':
                 return <Students 
-                    students={data.students} setStudents={data.setStudents}
+                    user={auth.user}
+                    students={pageData.students} setStudents={data.setStudents}
                     classes={data.classes} setClasses={data.setClasses}
                     teachers={data.teachers}
-                    monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports}
-                    tuitions={data.tuitions} setTuitions={data.setTuitions}
-                    counselings={data.counselings} setCounselings={data.setCounselings}
-                    lessonRecords={data.lessonRecords}
+                    monthlyReports={pageData.monthlyReports} setMonthlyReports={data.setMonthlyReports}
+                    tuitions={pageData.tuitions} setTuitions={data.setTuitions}
+                    counselings={pageData.counselings} setCounselings={data.setCounselings}
+                    lessonRecords={pageData.lessonRecords}
                     setLessonRecords={data.setLessonRecords}
                  />;
             case 'classes':
-                return <Classes classes={data.classes} setClasses={data.setClasses} teachers={data.teachers} students={data.students} setStudents={data.setStudents} />;
+                return <Classes user={auth.user} classes={pageData.classes} setClasses={data.setClasses} teachers={data.teachers} students={data.students} setStudents={data.setStudents} />;
             case 'teachers':
-                return <Teachers teachers={data.teachers} setTeachers={data.setTeachers} setStudents={data.setStudents} setClasses={data.setClasses} />;
+                 if (auth.user.role === 'teacher') return <Dashboard user={auth.user} {...data} students={pageData.students} classes={pageData.classes}/>;
+                return <Teachers user={auth.user} teachers={data.teachers} setTeachers={data.setTeachers} setStudents={data.setStudents} setClasses={data.setClasses} />;
             case 'lesson-records':
                 return <LessonRecords 
-                    lessonRecords={data.lessonRecords} 
+                    lessonRecords={pageData.lessonRecords} 
                     setLessonRecords={data.setLessonRecords} 
-                    students={data.students}
-                    classes={data.classes} 
+                    students={pageData.students}
+                    classes={pageData.classes} 
                     teachers={data.teachers} 
                 />;
             case 'class-attendance':
-                // Pass the user object to enable role-based permissions for editing attendance records.
-                return <ClassAttendance user={auth.user} classes={data.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
+                return <ClassAttendance user={auth.user} classes={pageData.classes} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} setLessonRecords={data.setLessonRecords} />;
             case 'reports':
-                return <Reports monthlyReports={data.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={data.students} teachers={data.teachers} lessonRecords={data.lessonRecords} classes={data.classes}/>;
+                return <Reports user={auth.user} monthlyReports={pageData.monthlyReports} setMonthlyReports={data.setMonthlyReports} students={pageData.students} teachers={data.teachers} lessonRecords={data.lessonRecords} classes={data.classes}/>;
             case 'tuition':
-                // FIX: Added the missing 'classes' prop required by the Tuition component for calculations.
+                 if (auth.user.role === 'teacher') return <Dashboard user={auth.user} {...data} students={pageData.students} classes={pageData.classes}/>;
                 return <Tuition tuitions={data.tuitions} setTuitions={data.setTuitions} students={data.students} classes={data.classes} />;
             case 'counseling':
-                return <Counseling counselings={data.counselings} setCounselings={data.setCounselings} students={data.students} teachers={data.teachers} />;
+                return <Counseling user={auth.user} counselings={pageData.counselings} setCounselings={data.setCounselings} students={pageData.students} teachers={data.teachers} />;
             case 'messaging':
-                return <Messaging students={data.students} classes={data.classes} />;
+                return <Messaging students={pageData.students} classes={pageData.classes} />;
             case 'schedule':
                 return <Schedule academyEvents={data.academyEvents} setAcademyEvents={data.setAcademyEvents} />;
             case 'daily-schedule':
-                return <DailySchedule classes={data.classes} students={data.students} teachers={data.teachers} />;
+                return <DailySchedule classes={pageData.classes} students={data.students} teachers={data.teachers} />;
             case 'meeting-notes':
+                 if (auth.user.role === 'teacher') return <Dashboard user={auth.user} {...data} students={pageData.students} classes={pageData.classes}/>;
                 return <MeetingNotes meetingNotes={data.meetingNotes} setMeetingNotes={data.setMeetingNotes} teachers={data.teachers} />;
             case 'test-generator':
                 return <TestGenerator />;
@@ -116,6 +141,7 @@ const App: React.FC = () => {
                 return auth.user ? <MyPage user={auth.user} onChangePassword={auth.changePassword} /> : null;
             default:
                 return <Dashboard 
+                    user={auth.user}
                     dashboardData={data.dashboardData}
                     students={data.students}
                     classes={data.classes}

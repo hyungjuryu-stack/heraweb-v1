@@ -1,10 +1,12 @@
 
+
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
-import type { Class, Teacher, Student } from '../types';
+import type { Class, Teacher, Student, User } from '../types';
 import ClassModal from '../components/ClassModal';
 
 interface ClassesPageProps {
+  user: User;
   classes: Class[];
   setClasses: React.Dispatch<React.SetStateAction<Class[]>>;
   teachers: Teacher[];
@@ -12,7 +14,7 @@ interface ClassesPageProps {
   setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
 }
 
-const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, students, setStudents }) => {
+const Classes: React.FC<ClassesPageProps> = ({ user, classes, setClasses, teachers, students, setStudents }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedClass, setSelectedClass] = useState<Class | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
@@ -22,6 +24,8 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
   
+  const canModify = user.role !== 'teacher';
+
   const teacherMap = useMemo(() => new Map(teachers.map(t => [t.id, t.name])), [teachers]);
   const studentMap = useMemo(() => new Map(students.map(s => [s.id, s.name])), [students]);
 
@@ -29,22 +33,24 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
     let sortableItems = [...classes];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        const key = sortConfig.key as keyof Class;
+        // FIX: Removed incorrect type assertion `as keyof Class` which caused the type error. `key` is now a string.
+        const key = sortConfig.key;
         let valA, valB;
 
         if (key === 'studentIds') {
             valA = a.studentIds.length;
             valB = b.studentIds.length;
+        // FIX: Correctly handle sorting by teacher. The key is 'teacherId' from headers, but the Class object has `teacherIds`. Used `teacherIds[0]` for the main teacher.
         } else if (key === 'teacherId') {
-            valA = teacherMap.get(a.teacherId) || '';
-            valB = teacherMap.get(b.teacherId) || '';
+            valA = teacherMap.get(a.teacherIds[0]) || '';
+            valB = teacherMap.get(b.teacherIds[0]) || '';
         } else if (key === 'grade') {
             valA = a.grade.join(', ');
             valB = b.grade.join(', ');
         }
         else {
-            valA = a[key];
-            valB = b[key];
+            valA = a[key as keyof Class];
+            valB = b[key as keyof Class];
         }
 
         if (valA < valB) {
@@ -213,7 +219,7 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
   };
 
   const handleDeselectAllClick = () => {
-    setSelectedIds([]);
+    setSelectedIds(new Set());
   };
   
   const headers: { key: string; label: string }[] = [
@@ -230,11 +236,13 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
     <div>
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-white">반/수업 관리</h1>
+        {canModify && (
         <button 
             onClick={handleAddNewClass}
             className="bg-[#E5A823] text-gray-900 font-bold py-2 px-4 rounded-lg hover:bg-yellow-400 transition-colors">
             신규 반 등록
         </button>
+        )}
       </div>
 
       <div className="bg-gray-800 rounded-lg p-4 mb-6 flex justify-between items-center min-h-[72px]">
@@ -251,12 +259,14 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
                   className="bg-gray-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-gray-500 transition-colors disabled:bg-gray-700 disabled:text-gray-500 disabled:cursor-not-allowed text-sm">
                   선택 취소
               </button>
+              {canModify && (
               <button 
                   onClick={handleDeleteSelected}
                   disabled={selectedIds.length === 0}
                   className="bg-red-600 text-white font-bold py-2 px-3 rounded-lg hover:bg-red-500 transition-colors disabled:bg-red-800 disabled:cursor-not-allowed text-sm">
                   선택 항목 삭제
               </button>
+              )}
           </div>
       </div>
 
@@ -303,19 +313,22 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
                         </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{classItem.name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{teacherMap.get(classItem.teacherId)}</td>
+                    {/* FIX: Correctly display teacher names from `teacherIds` array. */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.teacherIds.map(id => teacherMap.get(id)).join(', ')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade.join(', ')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{`${classItem.studentIds.length}명`}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.schedule}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.room}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.capacity}명</td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      {canModify && (
                         <button 
                           onClick={(e) => { e.stopPropagation(); handleEditClass(classItem); }} 
                           className="text-yellow-400 hover:text-yellow-300"
                         >
                           상세
                         </button>
+                      )}
                     </td>
                   </tr>
                   {expandedClassId === classItem.id && (
@@ -323,7 +336,8 @@ const Classes: React.FC<ClassesPageProps> = ({ classes, setClasses, teachers, st
                       <td colSpan={headers.length + 2} className="p-0">
                         <div className="p-4 bg-gray-900/30">
                           <h4 className="text-md font-bold text-[#E5A823] mb-3">{classItem.name} 학생 명단</h4>
-                          <p className="text-sm text-gray-300 mb-3"><span className="font-semibold">담당 강사:</span> {teacherMap.get(classItem.teacherId)}</p>
+                          {/* FIX: Display all teacher names from `teacherIds` array. */}
+                          <p className="text-sm text-gray-300 mb-3"><span className="font-semibold">담당 강사:</span> {classItem.teacherIds.map(id => teacherMap.get(id)).join(', ')}</p>
                           
                           {classItem.studentIds.length > 0 ? (
                             <ul className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2">

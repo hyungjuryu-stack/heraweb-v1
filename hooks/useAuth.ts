@@ -2,18 +2,27 @@ import { useState } from 'react';
 import type { User } from '../types';
 
 // Mock user database
+// IDs match teacher IDs from useMockData
 const users = [
-    { id: 'admin', password: 'password', name: '관리자', role: 'admin' as 'admin' | 'operator' | 'teacher' },
-    { id: 'operator1', password: 'password', name: '운영자', role: 'operator' as 'admin' | 'operator' | 'teacher' },
-    { id: 'teacher1', password: 'password', name: '이선생', role: 'teacher' as 'admin' | 'operator' | 'teacher' },
-    { id: 'teacher2', password: 'password', name: '박선생', role: 'teacher' as 'admin' | 'operator' | 'teacher' },
+    { id: 'admin-1', password: 'password', teacherId: 1, name: '김원장', role: 'admin' as const },
+    { id: 'op-5', password: 'password', teacherId: 5, name: '최직원', role: 'operator' as const },
+    { id: 'teacher-2', password: 'password', teacherId: 2, name: '이선생', role: 'teacher' as const },
+    { id: 'teacher-3', password: 'password', teacherId: 3, name: '박선생', role: 'teacher' as const },
+    { id: 'teacher-4', password: 'password', teacherId: 4, name: '정선생', role: 'teacher' as const },
+    { id: 'temp-teacher-3', password: 'temp_password', teacherId: 3, name: '박선생', role: 'teacher' as const },
 ];
 
 let userPasswords = new Map(users.map(u => [u.id, u.password]));
 const MAX_ATTEMPTS = 5;
 
 export const useAuth = () => {
-    const [user, setUser] = useState<User | null>({ id: 'admin', name: '관리자', role: 'admin' });
+    const [user, setUser] = useState<User | null>({
+        id: 'admin-1',
+        teacherId: 1,
+        name: '김원장',
+        role: 'admin',
+        mustChangePassword: false,
+    });
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [loginAttempts, setLoginAttempts] = useState(new Map<string, number>());
@@ -39,6 +48,7 @@ export const useAuth = () => {
         if (foundUser && storedPassword === password) {
             const userState: User = {
                 id: foundUser.id,
+                teacherId: foundUser.teacherId,
                 name: foundUser.name,
                 role: foundUser.role,
                 mustChangePassword: password.startsWith('temp_'),
@@ -90,7 +100,7 @@ export const useAuth = () => {
         await new Promise(resolve => setTimeout(resolve, 500));
         const foundUser = users.find(u => u.id === id);
         if (foundUser) {
-            const tempPassword = `temp_${id}`;
+            const tempPassword = `temp_${Math.random().toString(36).slice(-8)}`;
             userPasswords.set(id, tempPassword);
             setLoading(false);
             return tempPassword;

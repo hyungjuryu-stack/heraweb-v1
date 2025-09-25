@@ -2,10 +2,11 @@
 import React, { useMemo } from 'react';
 import Card from '../components/ui/Card';
 import { BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, Cell, PieChart, Pie } from 'recharts';
-import type { Student, Class, Teacher } from '../types';
+import type { Student, Class, Teacher, User } from '../types';
 import { StudentStatus } from '../types';
 
 interface DashboardProps {
+    user: User;
     dashboardData: {
         totalStudents: number;
         consultingStudents: number;
@@ -37,7 +38,7 @@ const renderCustomizedLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, per
   );
 };
 
-const Dashboard: React.FC<DashboardProps> = ({ dashboardData, students, classes, teachers }) => {
+const Dashboard: React.FC<DashboardProps> = ({ user, dashboardData, students, classes, teachers }) => {
 
     const gradeDistributionData = useMemo(() => {
         if (!students) return [];
@@ -57,11 +58,17 @@ const Dashboard: React.FC<DashboardProps> = ({ dashboardData, students, classes,
     const classDistributionData = useMemo(() => {
         if (!teachers || !classes) return [];
         
+        const classCountsByTeacher = classes.reduce((acc, cls) => {
+            cls.teacherIds.forEach(teacherId => {
+                acc[teacherId] = (acc[teacherId] || 0) + 1;
+            });
+            return acc;
+        }, {} as Record<number, number>);
+
         return teachers
             .filter(t => t.role === 'teacher' || t.role === 'admin')
             .map(teacher => {
-                const count = classes.filter(c => c.teacherId === teacher.id).length;
-                return { name: teacher.name, '담당 반 개수': count };
+                return { name: teacher.name, '담당 반 개수': classCountsByTeacher[teacher.id] || 0 };
             })
             .filter(data => data['담당 반 개수'] > 0)
             .sort((a, b) => b['담당 반 개수'] - a['담당 반 개수']);

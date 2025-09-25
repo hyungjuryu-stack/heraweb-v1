@@ -180,7 +180,18 @@ const createInitialData = () => {
     ];
     
     const classes: Class[] = classNames.map((name, index) => {
-        const teacherId = teachers[index % teachers.length].id;
+        const classTeachers = teachers.filter(t => t.position === '강사' || t.position === '원장');
+        const mainTeacher = classTeachers[index % classTeachers.length];
+        const teacherIds = [mainTeacher.id];
+
+        // 30% 확률로 보조 강사 추가
+        if (Math.random() < 0.3) {
+            const otherTeachers = classTeachers.filter(t => t.id !== mainTeacher.id);
+            if (otherTeachers.length > 0) {
+                teacherIds.push(getRandom(otherTeachers).id);
+            }
+        }
+
         let grade: string[] = [];
         let schedule = '';
         const gradeNum = name.match(/\d/);
@@ -209,7 +220,7 @@ const createInitialData = () => {
             }
         }
         const capacity = name.startsWith('수') ? 13 : 6;
-        return { id: index + 1, name, teacherId, grade, studentIds: [], schedule, room: `${getRandomInt(2, 5)}0${getRandomInt(1, 4)}호`, capacity };
+        return { id: index + 1, name, teacherIds, grade, studentIds: [], schedule, room: `${getRandomInt(2, 5)}0${getRandomInt(1, 4)}호`, capacity };
     });
 
     // 4. 재원생을 반에 배정
@@ -222,7 +233,7 @@ const createInitialData = () => {
             const selectedClass = getRandom(appropriateRegularClasses);
             selectedClass.studentIds.push(student.id);
             student.regularClassId = selectedClass.id;
-            student.teacherId = selectedClass.teacherId;
+            student.teacherId = selectedClass.teacherIds[0];
         }
 
         if (student.grade.startsWith('중') && Math.random() > 0.6) {
