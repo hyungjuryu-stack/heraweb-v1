@@ -83,8 +83,9 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
             
             if (prevTuition) {
-                // FIX: Reverted to Object.assign to resolve a TypeScript error where the spread operator was not correctly identifying the type as an object.
-                const copiedData: Tuition = Object.assign({}, prevTuition);
+                // FIX: The explicit type annotation was causing a TypeScript error.
+                // Removing it allows TypeScript to correctly infer the type from the spread object.
+                const copiedData = { ...prevTuition };
 
                 copiedData.id = `${student.id}-${selectedMonth}`;
                 copiedData.month = selectedMonth;

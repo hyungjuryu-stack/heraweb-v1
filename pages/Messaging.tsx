@@ -44,6 +44,9 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
   const [messageHistory, setMessageHistory] = useState<HistoryItem[]>([]);
   const [expandedHistoryId, setExpandedHistoryId] = useState<number | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState<number | 'ALL'>(10);
+  const headerCheckboxRef = useRef<HTMLInputElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const gradeOptions = useMemo(() => ['all', ...Array.from(new Set(students.map(s => s.grade))).sort()], [students]);
@@ -62,6 +65,64 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
   const uniqueRecipients = useMemo(() => {
       return Array.from(new Map(selectedRecipients.map(item => [item.phone, item])).values());
   }, [selectedRecipients]);
+
+    useEffect(() => {
+        setCurrentPage(1);
+    }, [filterGrade, filterClassId, itemsPerPage]);
+
+    const { currentTableData, totalPages } = useMemo(() => {
+        const numItems = filteredStudents.length;
+        if (itemsPerPage === 'ALL' || numItems === 0) {
+            return { currentTableData: filteredStudents, totalPages: 1 };
+        }
+        
+        const totalPagesCalc = Math.ceil(numItems / itemsPerPage);
+        const validCurrentPage = Math.max(1, Math.min(currentPage, totalPagesCalc));
+
+        const start = (validCurrentPage - 1) * itemsPerPage;
+        const end = start + itemsPerPage;
+        
+        return { currentTableData: filteredStudents.slice(start, end), totalPages: totalPagesCalc };
+    }, [filteredStudents, currentPage, itemsPerPage]);
+
+    const paginationNumbers = useMemo(() => {
+        if (totalPages <= 1) return [];
+        const pageNumbers = [];
+        const maxVisiblePages = 5;
+        if (totalPages <= maxVisiblePages) {
+            for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
+        } else {
+            let startPage = Math.max(1, currentPage - 2);
+            let endPage = Math.min(totalPages, currentPage + 2);
+            if (currentPage <= 3) {
+                endPage = maxVisiblePages;
+            } else if (currentPage + 2 >= totalPages) {
+                startPage = totalPages - maxVisiblePages + 1;
+            }
+            for (let i = startPage; i <= endPage; i++) pageNumbers.push(i);
+        }
+        return pageNumbers;
+    }, [totalPages, currentPage]);
+
+    useEffect(() => {
+        if (headerCheckboxRef.current) {
+             const allPossibleRecipientsFromFilter: Recipient[] = filteredStudents.flatMap(s => {
+                const studentRecipients: Recipient[] = [];
+                if (s.motherPhone) studentRecipients.push({ id: `m${s.id}`, studentId: s.id, name: s.motherName, phone: s.motherPhone, type: '모' });
+                if (s.fatherPhone) studentRecipients.push({ id: `f${s.id}`, studentId: s.id, name: s.fatherName, phone: s.fatherPhone, type: '부' });
+                if (s.studentPhone) studentRecipients.push({ id: `s${s.id}`, studentId: s.id, name: s.name, phone: s.studentPhone, type: '학생' });
+                return studentRecipients;
+            });
+            const filteredRecipientIds = new Set(allPossibleRecipientsFromFilter.map(r => r.id));
+
+            const selectedIdsSet = new Set(selectedRecipients.map(r => r.id));
+            const selectedFilteredCount = allPossibleRecipientsFromFilter.filter(r => selectedIdsSet.has(r.id)).length;
+            
+            headerCheckboxRef.current.checked = selectedFilteredCount === filteredRecipientIds.size && filteredRecipientIds.size > 0;
+            headerCheckboxRef.current.indeterminate = selectedFilteredCount > 0 && selectedFilteredCount < filteredRecipientIds.size;
+        }
+    }, [selectedRecipients, filteredStudents]);
+
 
   const handleRecipientToggle = (student: Student, type: '학생' | '모' | '부') => {
       let phone = '';
@@ -105,17 +166,24 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
   };
   
   const handleSelectAllFiltered = (e: React.ChangeEvent<HTMLInputElement>) => {
-      if (e.target.checked) {
-          const allRecipients: Recipient[] = [];
-          filteredStudents.forEach(s => {
-              if (s.motherPhone) allRecipients.push({ id: `m${s.id}`, studentId: s.id, name: s.motherName, phone: s.motherPhone, type: '모' });
-              if (s.fatherPhone) allRecipients.push({ id: `f${s.id}`, studentId: s.id, name: s.fatherName, phone: s.fatherPhone, type: '부' });
-              if (s.studentPhone) allRecipients.push({ id: `s${s.id}`, studentId: s.id, name: s.name, phone: s.studentPhone, type: '학생' });
-          });
-          setSelectedRecipients(Array.from(new Map(allRecipients.map(r => [r.id, r])).values()));
-      } else {
-          setSelectedRecipients([]);
-      }
+    const recipientsFromFilter: Recipient[] = filteredStudents.flatMap(s => {
+        const studentRecipients: Recipient[] = [];
+        if (s.motherPhone) studentRecipients.push({ id: `m${s.id}`, studentId: s.id, name: s.motherName, phone: s.motherPhone, type: '모' });
+        if (s.fatherPhone) studentRecipients.push({ id: `f${s.id}`, studentId: s.id, name: s.fatherName, phone: s.fatherPhone, type: '부' });
+        if (s.studentPhone) studentRecipients.push({ id: `s${s.id}`, studentId: s.id, name: s.name, phone: s.studentPhone, type: '학생' });
+        return studentRecipients;
+    });
+    
+    const idsFromFilter = new Set(recipientsFromFilter.map(r => r.id));
+
+    if (e.target.checked) {
+        setSelectedRecipients(prev => {
+            const newRecipientsToAdd = recipientsFromFilter.filter(r => !prev.some(pr => pr.id === r.id));
+            return [...prev, ...newRecipientsToAdd];
+        });
+    } else {
+        setSelectedRecipients(prev => prev.filter(r => !idsFromFilter.has(r.id)));
+    }
   };
 
 
@@ -241,13 +309,13 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
               <table className="min-w-full">
                 <thead className="sticky top-0 bg-[#1A3A32]">
                   <tr className="border-b border-gray-600">
-                    <th className="p-2 w-10"><input type="checkbox" onChange={handleSelectAllFiltered} className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600" /></th>
+                    <th className="p-2 w-10"><input type="checkbox" ref={headerCheckboxRef} onChange={handleSelectAllFiltered} className="w-4 h-4 text-yellow-500 bg-gray-700 border-gray-600 rounded focus:ring-yellow-600" /></th>
                     <th className="p-2 text-left text-xs font-bold text-gray-300">학생</th>
                     <th className="p-2 text-center text-xs font-bold text-gray-300">발송 대상</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-700/50">
-                  {filteredStudents.map(student => (
+                  {currentTableData.map(student => (
                     <tr key={student.id} className="hover:bg-gray-800/40">
                       <td></td>
                       <td className="p-2 text-sm">
@@ -266,7 +334,31 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
                 </tbody>
               </table>
             </div>
-            <div className="pt-2 text-sm text-gray-400">{filteredStudents.length}명 중 {uniqueRecipients.length}명에게 발송</div>
+             <div className="flex justify-between items-center pt-2">
+                 <div className="flex items-center gap-2 text-sm">
+                    <label htmlFor="itemsPerPageSelect" className="text-gray-400">페이지당:</label>
+                    <select
+                        id="itemsPerPageSelect"
+                        value={itemsPerPage}
+                        onChange={e => setItemsPerPage(e.target.value === 'ALL' ? 'ALL' : Number(e.target.value))}
+                        className="bg-gray-700 border border-gray-600 rounded-md py-1 pl-2 pr-8 text-white focus:ring-[#E5A823] focus:border-[#E5A823]"
+                    >
+                        <option value={10}>10</option>
+                        <option value={20}>20</option>
+                        <option value={50}>50</option>
+                        <option value="ALL">All</option>
+                    </select>
+                </div>
+                 <div className="flex items-center gap-1 text-sm">
+                    <button onClick={() => setCurrentPage(1)} disabled={currentPage === 1 || totalPages === 0} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 19l-7-7 7-7m8 14l-7-7 7-7" /></svg></button>
+                    <button onClick={() => setCurrentPage(p => Math.max(1, p - 1))} disabled={currentPage === 1 || totalPages === 0} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" /></svg></button>
+                    {paginationNumbers.map(page => <button key={page} onClick={() => setCurrentPage(page)} className={`px-3 py-1 rounded-md text-sm font-medium ${currentPage === page ? 'bg-[#E5A823] text-gray-900' : 'bg-gray-700 text-white'}`}>{page}</button>)}
+                    <button onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))} disabled={currentPage === totalPages || totalPages === 0} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" /></svg></button>
+                    <button onClick={() => setCurrentPage(totalPages)} disabled={currentPage === totalPages || totalPages === 0} className="p-2 bg-gray-700 rounded-md hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white"><svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 5l7 7-7 7M5 5l7 7-7 7" /></svg></button>
+                </div>
+
+                <div className="text-sm text-gray-400">총 {filteredStudents.length}명 / 발송 {uniqueRecipients.length}명</div>
+            </div>
           </Card>
         </div>
 

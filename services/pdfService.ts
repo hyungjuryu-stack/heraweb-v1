@@ -9,7 +9,7 @@ export const generateReportAsPdf = async (element: HTMLElement, filename: string
         backgroundColor: '#ffffff',
     });
 
-    const imgData = canvas.toDataURL('image/png');
+    const imgData = canvas.toDataURL('image/jpeg', 0.95);
     const pdf = new jsPDF({
       orientation: 'portrait',
       unit: 'mm',
@@ -36,7 +36,7 @@ export const generateReportAsPdf = async (element: HTMLElement, filename: string
     const x = (pdfWidth - imgWidth) / 2;
     const y = 0; // Start from top
     
-    pdf.addImage(imgData, 'PNG', x, y, imgWidth, imgHeight);
+    pdf.addImage(imgData, 'JPEG', x, y, imgWidth, imgHeight);
     pdf.save(filename);
 
   } catch (error) {

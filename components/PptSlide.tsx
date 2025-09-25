@@ -14,7 +14,7 @@ const PptSlide: React.FC<PptSlideProps> = ({ title, description, mockup, pageNum
         <div style={{
             width: '1280px',
             height: '720px',
-            backgroundColor: '#1A3A32',
+            backgroundColor: '#0d211c',
             color: 'white',
             display: 'flex',
             flexDirection: 'column',
@@ -30,7 +30,7 @@ const PptSlide: React.FC<PptSlideProps> = ({ title, description, mockup, pageNum
             
             {/* Body */}
             <main style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '30px', flexGrow: 1, paddingTop: '30px', overflow: 'hidden' }}>
-                <div style={{ fontSize: '18px', lineHeight: 1.6, color: '#E0E0E0', whiteSpace: 'pre-wrap' }}>
+                <div style={{ fontSize: '16px', lineHeight: 1.6, color: '#E0E0E0', whiteSpace: 'pre-wrap' }}>
                     {description}
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
