@@ -1,4 +1,3 @@
-
 import React, { useState, useMemo, useEffect } from 'react';
 import type { Class, Student, Teacher, LessonRecord, HomeworkGrade, User } from '../types';
 import { KakaoTalkIcon } from '../components/Icons';
@@ -148,14 +147,10 @@ const NotificationPreviewModal: React.FC<{
             const details: string[] = [];
             let isNotifiable = false;
 
-            if (!record) {
-                isNotifiable = true;
-                details.push('결석 (기록 없음)');
-            } else {
-                if (record.attendance !== '출석') {
-                    details.push(record.attendance);
-                    isNotifiable = true;
-                }
+            if (record) { // 기록이 있는 경우에만 처리
+                const attendanceInfo = record.attendance;
+                
+                // 알림톡 발송 기준: 태도, 과제, 자기주도 C등급 이하 또는 테스트 점수 기록
                 if (poorGrades.includes(record.attitude)) {
                     details.push(`태도 미흡(${record.attitude})`);
                     isNotifiable = true;
@@ -173,8 +168,10 @@ const NotificationPreviewModal: React.FC<{
                     details.push(`테스트: ${scores.join(', ')}`);
                     isNotifiable = true;
                 }
-                if (record.attendance === '출석' && isNotifiable) {
-                     details.unshift('출석');
+                
+                // 발송 대상일 경우, 출결 정보를 메시지 맨 앞에 추가
+                if (isNotifiable) {
+                    details.unshift(attendanceInfo);
                 }
             }
             
@@ -364,9 +361,8 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
               const record = recordsMap.get(`${student.id}-${dateString}`);
               if (!record) return false;
               const scores = [record.testScore1, record.testScore2, record.testScore3].filter(Boolean);
-              return record.attendance === '지각' ||
-                     record.attendance === '결석' ||
-                     ['C', 'D', 'F'].includes(record.attitude) ||
+              // 출결(지각, 결석)은 발송 기준에서 제외합니다.
+              return poorHomeworkGrades.includes(record.attitude) ||
                      poorHomeworkGrades.includes(record.homework) ||
                      poorHomeworkGrades.includes(record.selfDirectedLearning) ||
                      scores.length > 0;
@@ -496,10 +492,7 @@ const ClassAttendance: React.FC<ClassAttendanceProps> = ({ user, classes, studen
                         } else if (status === 'sending') {
                             content = (
                                 <button disabled className="w-full text-xs px-2 py-1.5 rounded bg-gray-700 text-gray-400 cursor-not-allowed flex items-center justify-center">
-                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
+                                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle><path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
                                     전송 중...
                                 </button>
                             );
