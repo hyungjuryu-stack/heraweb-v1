@@ -1,5 +1,3 @@
-
-
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
 import type { Tuition, Student, Class } from '../types';
@@ -85,10 +83,8 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
             
             if (prevTuition) {
-                // FIX: Removed the explicit type annotation `: Tuition` to resolve the "Spread types may only be created from object types" error.
-                // FIX: Removed the explicit type annotation `: Tuition` which was causing a TypeScript error.
-                // TypeScript can correctly infer the type from the spread object.
-                const copiedData = { ...prevTuition };
+                // FIX: Replaced spread syntax with Object.assign to resolve "Spread types may only be created from object types" error. The if-check ensures prevTuition is defined.
+                const copiedData = Object.assign({}, prevTuition);
 
                 copiedData.id = `${student.id}-${selectedMonth}`;
                 copiedData.month = selectedMonth;
