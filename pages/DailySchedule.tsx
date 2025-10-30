@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import Card from '../components/ui/Card';
 import type { Class, Student, Teacher } from '../types';
@@ -48,7 +49,7 @@ const DailySchedule: React.FC<DailyScheduleProps> = ({ classes, students, teache
                 scheduledClasses.push({
                     id: cls.id,
                     name: cls.name,
-                    teacherName: teacherMap.get(cls.teacherId) || '미배정',
+                    teacherName: cls.teacherIds.map(id => teacherMap.get(id)).filter(Boolean).join(', ') || '미배정',
                     startTime: timeMatch[1],
                     endTime: timeMatch[2],
                     room: cls.room,

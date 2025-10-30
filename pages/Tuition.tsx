@@ -83,8 +83,8 @@ const TuitionPage: React.FC<TuitionPageProps> = ({ tuitions, setTuitions, studen
             const siblingDiscountRate = shouldApplyDiscount ? SIBLING_DISCOUNT_RATE : 0;
             
             if (prevTuition) {
-                // FIX: Replaced spread syntax with Object.assign to resolve "Spread types may only be created from object types" error. The if-check ensures prevTuition is defined.
-                const copiedData = Object.assign({}, prevTuition);
+                // FIX: Use spread syntax for object copying to resolve type inference issues.
+                const copiedData = { ...prevTuition };
 
                 copiedData.id = `${student.id}-${selectedMonth}`;
                 copiedData.month = selectedMonth;

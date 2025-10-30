@@ -1,5 +1,4 @@
 
-
 import React, { useState, useMemo, useEffect } from 'react';
 import Card from '../components/ui/Card';
 import type { Class, Teacher, Student, User } from '../types';
@@ -33,14 +32,12 @@ const Classes: React.FC<ClassesPageProps> = ({ user, classes, setClasses, teache
     let sortableItems = [...classes];
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        // FIX: Removed incorrect type assertion `as keyof Class` which caused the type error. `key` is now a string.
         const key = sortConfig.key;
         let valA, valB;
 
         if (key === 'studentIds') {
             valA = a.studentIds.length;
             valB = b.studentIds.length;
-        // FIX: Correctly handle sorting by teacher. The key is 'teacherId' from headers, but the Class object has `teacherIds`. Used `teacherIds[0]` for the main teacher.
         } else if (key === 'teacherId') {
             valA = teacherMap.get(a.teacherIds[0]) || '';
             valB = teacherMap.get(b.teacherIds[0]) || '';
@@ -219,7 +216,7 @@ const Classes: React.FC<ClassesPageProps> = ({ user, classes, setClasses, teache
   };
 
   const handleDeselectAllClick = () => {
-    setSelectedIds(new Set());
+    setSelectedIds([]);
   };
   
   const headers: { key: string; label: string }[] = [
@@ -313,7 +310,6 @@ const Classes: React.FC<ClassesPageProps> = ({ user, classes, setClasses, teache
                         </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{classItem.name}</td>
-                    {/* FIX: Correctly display teacher names from `teacherIds` array. */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.teacherIds.map(id => teacherMap.get(id)).join(', ')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{classItem.grade.join(', ')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{`${classItem.studentIds.length}명`}</td>
@@ -336,7 +332,6 @@ const Classes: React.FC<ClassesPageProps> = ({ user, classes, setClasses, teache
                       <td colSpan={headers.length + 2} className="p-0">
                         <div className="p-4 bg-gray-900/30">
                           <h4 className="text-md font-bold text-[#E5A823] mb-3">{classItem.name} 학생 명단</h4>
-                          {/* FIX: Display all teacher names from `teacherIds` array. */}
                           <p className="text-sm text-gray-300 mb-3"><span className="font-semibold">담당 강사:</span> {classItem.teacherIds.map(id => teacherMap.get(id)).join(', ')}</p>
                           
                           {classItem.studentIds.length > 0 ? (

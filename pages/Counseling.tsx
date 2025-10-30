@@ -1,16 +1,18 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
-import type { Counseling, Student, Teacher } from '../types';
+import type { Counseling, Student, Teacher, User } from '../types';
 import CounselingModal from '../components/CounselingModal';
 
 interface CounselingPageProps {
+    user: User;
     counselings: Counseling[];
     setCounselings: React.Dispatch<React.SetStateAction<Counseling[]>>;
     students: Student[];
     teachers: Teacher[];
 }
 
-const Counseling: React.FC<CounselingPageProps> = ({ counselings, setCounselings, students, teachers }) => {
+const Counseling: React.FC<CounselingPageProps> = ({ user, counselings, setCounselings, students, teachers }) => {
     const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'ascending' | 'descending' } | null>({ key: 'date', direction: 'descending' });
     const [selectedIds, setSelectedIds] = useState<number[]>([]);
     const [searchTerm, setSearchTerm] = useState('');

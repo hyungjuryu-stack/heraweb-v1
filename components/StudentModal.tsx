@@ -107,7 +107,7 @@ const StudentModal: React.FC<StudentModalProps> = ({ isOpen, onClose, onSave, st
     if (formData.regularClassId) {
         const selectedClass = classes.find(c => c.id === formData.regularClassId);
         if (selectedClass) {
-            setFormData(prev => ({...prev, teacherId: selectedClass.teacherId}));
+            setFormData(prev => ({...prev, teacherId: selectedClass.teacherIds[0] || null}));
         }
     }
   }, [formData.regularClassId, classes]);

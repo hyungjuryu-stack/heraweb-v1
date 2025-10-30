@@ -1,18 +1,19 @@
 
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
-import type { Teacher, Student, Class } from '../types';
+import type { Teacher, Student, Class, User } from '../types';
 import TeacherModal from '../components/TeacherModal';
 import ConfirmationModal from '../components/ConfirmationModal';
 
 interface TeachersPageProps {
+  user: User;
   teachers: Teacher[];
   setTeachers: React.Dispatch<React.SetStateAction<Teacher[]>>;
   setStudents: React.Dispatch<React.SetStateAction<Student[]>>;
   setClasses: React.Dispatch<React.SetStateAction<Class[]>>;
 }
 
-const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStudents, setClasses }) => {
+const Teachers: React.FC<TeachersPageProps> = ({ user, teachers, setTeachers, setStudents, setClasses }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTeacher, setSelectedTeacher] = useState<Teacher | null>(null);
   const [sortConfig, setSortConfig] = useState<{ key: keyof Teacher, direction: 'ascending' | 'descending' } | null>({ key: 'name', direction: 'ascending' });
@@ -111,7 +112,10 @@ const Teachers: React.FC<TeachersPageProps> = ({ teachers, setTeachers, setStude
 
   const handleConfirmDelete = () => {
     setTeachers(prev => prev.filter(t => !selectedIds.includes(t.id)));
-    setClasses(prev => prev.map(c => selectedIds.includes(c.teacherId) ? { ...c, teacherId: 0 } : c));
+    setClasses(prev => prev.map(c => ({
+        ...c,
+        teacherIds: c.teacherIds.filter(id => !selectedIds.includes(id))
+    })));
     setStudents(prev => prev.map(s => selectedIds.includes(s.teacherId ?? -1) ? { ...s, teacherId: null } : s));
     setSelectedIds([]);
     setIsConfirmModalOpen(false);

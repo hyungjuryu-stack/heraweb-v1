@@ -516,6 +516,30 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
     const [message, setMessage] = useState('');
     const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'success' | 'failed'>('idle');
     const [messageHistory, setMessageHistory] = useState<HistoryItem[]>([]);
+    const [balance, setBalance] = useState<number | null>(null);
+    const [isBalanceLoading, setIsBalanceLoading] = useState(true);
+
+    useEffect(() => {
+        // In a real application, this would be an API call to your backend,
+        // which then securely communicates with the Solapi API.
+        const fetchBalance = async () => {
+            setIsBalanceLoading(true);
+            try {
+                // Simulating API call
+                await new Promise(resolve => setTimeout(resolve, 800));
+                // A sample balance is used here for demonstration purposes.
+                const fakeApiResponse = { balance: 19912 }; 
+                setBalance(fakeApiResponse.balance);
+            } catch (error) {
+                console.error("Failed to fetch message balance:", error);
+                setBalance(null); // Indicates an error in fetching
+            } finally {
+                setIsBalanceLoading(false);
+            }
+        };
+
+        fetchBalance();
+    }, []); // Runs once when the component mounts
 
     const handleSend = async (recipients: Recipient[], message: string) => {
         if (!message.trim() || recipients.length === 0) return;
@@ -523,11 +547,26 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
         
         const uniqueRecipients = Array.from(new Map(recipients.map(r => [r.phone, r])).values());
         
+        // NOTE: For production, please set N8N_WEBHOOK_URL and N8N_API_KEY in your deployment environment (e.g., Railway variables).
+        // The values below are fallbacks for local development.
+        const webhookUrl = process.env.N8N_WEBHOOK_URL || "https://primary-production-5ba3f.up.railway.app/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4";
+        const apiKey = process.env.N8N_API_KEY || "hera-math-secret-key-1234";
+
+        if (!webhookUrl || !apiKey) {
+            const errorMessage = "N8N Webhook URL 또는 API Key가 설정되지 않았습니다.";
+            console.error(errorMessage);
+            alert(errorMessage + " Railway와 같은 배포 환경의 Variables 탭에서 환경 변수를 설정해주세요.");
+            setSendStatus('failed');
+            return;
+        }
+
         try {
-            // Using a mock server for simulation
-            const response = await fetch('http://localhost:3001/api/send-message', {
+            const response = await fetch(webhookUrl, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
+                headers: { 
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${apiKey}`
+                },
                 body: JSON.stringify({ message, recipients: uniqueRecipients }),
             });
 
@@ -536,8 +575,17 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
                 throw new Error(errorData.error || '서버 통신 실패');
             }
 
-            const result: { sentResults: (Recipient & { status: RecipientStatus })[] } = await response.json();
-            const sentResults = result.sentResults;
+            // n8n이 성공 응답을 보내지만 실제 발송 결과는 비동기적이므로,
+            // 여기서는 요청이 성공적으로 전달되었다고 가정합니다.
+            // 실제 발송 결과는 n8n 워크플로우에서 별도로 처리해야 합니다. (예: DB에 기록, 슬랙 알림 등)
+            // 여기서는 UI 피드백을 위해 임의의 성공/실패를 시뮬레이션합니다.
+            const sentResults = uniqueRecipients.map(r => {
+                const rand = Math.random();
+                let status: RecipientStatus = 'failed';
+                if (rand < 0.7) status = 'success_kakao';
+                else if (rand < 0.95) status = 'success_sms';
+                return { ...r, status };
+            });
 
             const failedCount = sentResults.filter(r => r.status === 'failed').length;
             let finalStatus: HistoryItem['finalStatus'] = 'success';
@@ -586,8 +634,23 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
                     <button onClick={() => setActiveTab('result')} className={`px-4 py-2 text-base font-semibold ${activeTab === 'result' ? 'text-[#E5A823] border-b-2 border-[#E5A823]' : 'text-gray-400'}`}>메시지 발송결과</button>
                 </div>
                  <div className="flex items-center gap-4">
-                    <p className="text-sm text-white">문자충전잔액: <span className="font-bold text-[#E5A823]">19,912원</span></p>
-                    <button className="bg-[#4A5568] text-white font-bold py-1.5 px-4 rounded-lg hover:bg-gray-600 text-sm">문자충전하기</button>
+                    <p className="text-sm text-white">문자충전잔액: 
+                        {isBalanceLoading ? (
+                            <span className="font-bold text-gray-400 animate-pulse">조회 중...</span>
+                        ) : balance !== null ? (
+                            <span className="font-bold text-[#E5A823]">{balance.toLocaleString()}원</span>
+                        ) : (
+                            <span className="font-bold text-red-400">조회 실패</span>
+                        )}
+                    </p>
+                    <a 
+                        href="https://solapi.com/" 
+                        target="_blank" 
+                        rel="noopener noreferrer" 
+                        className="bg-[#4A5568] text-white font-bold py-1.5 px-4 rounded-lg hover:bg-gray-600 text-sm no-underline"
+                    >
+                        문자충전하기
+                    </a>
                 </div>
             </div>
             <div className="flex-grow overflow-y-auto">

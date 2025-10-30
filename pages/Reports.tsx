@@ -1,6 +1,7 @@
+
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import Card from '../components/ui/Card';
-import type { MonthlyReport, Student, Teacher, LessonRecord, Class } from '../types';
+import type { MonthlyReport, Student, Teacher, LessonRecord, Class, User } from '../types';
 import ReportModal from '../components/ReportModal';
 import ReportPreviewModal from '../components/ReportPreviewModal';
 import { generateReportAsPdf } from '../services/pdfService';
@@ -17,6 +18,7 @@ const SentStatusBadge: React.FC<{ status: MonthlyReport['sentStatus'] }> = ({ st
 }
 
 interface ReportsPageProps {
+  user: User;
   monthlyReports: MonthlyReport[];
   setMonthlyReports: React.Dispatch<React.SetStateAction<MonthlyReport[]>>;
   students: Student[];
@@ -25,7 +27,7 @@ interface ReportsPageProps {
   classes: Class[];
 }
 
-const Reports: React.FC<ReportsPageProps> = ({ monthlyReports, setMonthlyReports, students, teachers, lessonRecords, classes }) => {
+const Reports: React.FC<ReportsPageProps> = ({ user, monthlyReports, setMonthlyReports, students, teachers, lessonRecords, classes }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);

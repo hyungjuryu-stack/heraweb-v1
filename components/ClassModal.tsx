@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo } from 'react';
 import type { Class, Teacher, Student } from '../types';
 import Card from './ui/Card';
@@ -12,9 +13,9 @@ interface ClassModalProps {
   students: Student[];
 }
 
-const defaultClassData = {
+const defaultClassData: Omit<Class, 'id' | 'studentIds'> = {
   name: '',
-  teacherId: 0,
+  teacherIds: [],
   grade: [],
   schedule: '',
   room: '1호실',
@@ -86,7 +87,7 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
       if (classData) {
         setFormData({
           name: classData.name,
-          teacherId: classData.teacherId,
+          teacherIds: classData.teacherIds,
           grade: classData.grade,
           schedule: classData.schedule,
           room: classData.room,
@@ -102,7 +103,6 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
         // Time parsing logic
         if (timeStr && timeStr.includes('-')) {
           const [start, end] = timeStr.split('-');
-          // FIX: Explicitly type the destructured arguments from Object.entries to resolve `t.start` and `t.end` being of type `unknown`.
           const periodMatch = Object.entries(periodTimes).find(([p, t]: [string, { start: string; end: string }]) => t.start === start && t.end === end);
           if (periodMatch) {
             setSelectedPeriod(parseInt(periodMatch[0]));
@@ -126,7 +126,7 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
 
       } else {
         // Reset for new class
-        setFormData({...defaultClassData, teacherId: assignableTeachers[0]?.id || 0});
+        setFormData({...defaultClassData, teacherIds: assignableTeachers.length > 0 ? [assignableTeachers[0].id] : []});
         setSelectedDays([]);
         setSelectedPeriod(1);
         setCustomTime({ start: '16:00', end: '18:00' });
@@ -137,8 +137,15 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
-    const isNumericField = ['teacherId', 'capacity'].includes(name);
-    setFormData(prev => ({ ...prev, [name]: isNumericField ? parseInt(value, 10) : value }));
+    if (name === 'teacherId') {
+        const teacherId = parseInt(value, 10);
+        if (!isNaN(teacherId)) {
+            setFormData(prev => ({...prev, teacherIds: [teacherId, ...prev.teacherIds.slice(1)] }));
+        }
+    } else {
+        const isNumericField = ['capacity'].includes(name);
+        setFormData(prev => ({ ...prev, [name]: isNumericField ? parseInt(value, 10) : value }));
+    }
   };
 
   const handleDayToggle = (day: string) => {
@@ -322,7 +329,7 @@ const ClassModal: React.FC<ClassModalProps> = ({ isOpen, onClose, onSave, classD
               </div>
               <div>
                 <label htmlFor="teacherId" className="block text-sm font-medium text-gray-300 mb-1">담당 교사</label>
-                <select name="teacherId" id="teacherId" value={formData.teacherId} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
+                <select name="teacherId" id="teacherId" value={formData.teacherIds[0] || ''} onChange={handleChange} required className="w-full bg-gray-800 border border-gray-600 rounded-md p-2 text-white focus:ring-[#E5A823] focus:border-[#E5A823]">
                     <option value="" disabled>선생님 선택</option>
                     {assignableTeachers.map(teacher => (
                         <option key={teacher.id} value={teacher.id}>{teacher.name}</option>
