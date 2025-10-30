@@ -549,7 +549,7 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
         
         // NOTE: For production, please set N8N_WEBHOOK_URL and N8N_API_KEY in your deployment environment (e.g., Railway variables).
         // The values below are fallbacks for local development.
-        const webhookUrl = process.env.N8N_WEBHOOK_URL || "https://primary-production-5ba3f.up.railway.app/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4";
+        const webhookUrl = process.env.N8N_WEBHOOK_URL || "https://primary-production-5ba3f.up.railway.app/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4";
         const apiKey = process.env.N8N_API_KEY || "hera-math-secret-key-1234";
 
         if (!webhookUrl || !apiKey) {

@@ -14,38 +14,38 @@ app.use(cors()); // Cross-Origin Resource Sharing 허용
 app.use(express.json()); // JSON 요청 본문 파싱
 
 // --- 외부 메시징 서비스 연동 (시뮬레이션) ---
-// TODO: 이 부분에 실제 메시징 서비스(예: Twilio, NHN Cloud, Kakao)의 SDK를 연동해야 합니다.
+// 실제 운영 환경에서는 이 부분에 솔라피(Solapi), NHN Cloud 등 전문 업체의 SDK를 연동합니다.
 
 /**
- * 카카오톡 친구톡/알림톡 발송 시뮬레이션 함수
+ * 카카오톡 알림톡 발송 시뮬레이션 함수 (1순위)
  * @param {object} recipient - { name, phone }
  * @param {string} message
  * @returns {Promise<boolean>} - 성공 여부
  */
 const sendKakaoTalk = async (recipient, message) => {
-  console.log(`[Kakao] ${recipient.name}(${recipient.phone})님에게 발송 시도...`);
-  // 실제 API 호출 로직이 여기에 들어갑니다.
-  // 시뮬레이션: 70% 확률로 성공, 30% 확률로 실패 (채널 친구가 아닌 경우 등)
+  console.log(`[Kakao Alimtalk] ${recipient.name}(${recipient.phone})님에게 발송 시도...`);
+  // 실제 API 호출 로직: 사전 승인된 템플릿과 함께 메시지 발송 요청
+  // 시뮬레이션: 70% 확률로 성공, 30% 확률로 실패 (채널 차단, 카톡 미사용자 등)
   await new Promise(resolve => setTimeout(resolve, 150)); // 네트워크 딜레이 시뮬레이션
   const isSuccess = Math.random() < 0.7;
   if (isSuccess) {
-    console.log(`[Kakao] ${recipient.name}님에게 발송 성공!`);
+    console.log(`[Kakao Alimtalk] ${recipient.name}님에게 발송 성공!`);
     return true;
   } else {
-    console.log(`[Kakao] ${recipient.name}님에게 발송 실패.`);
+    console.log(`[Kakao Alimtalk] ${recipient.name}님에게 발송 실패.`);
     return false;
   }
 };
 
 /**
- * SMS/LMS 문자 발송 시뮬레이션 함수
+ * SMS/LMS 문자 발송 시뮬레이션 함수 (알림톡 실패 시 Fallback)
  * @param {object} recipient - { name, phone }
  * @param {string} message
  * @returns {Promise<boolean>} - 성공 여부
  */
 const sendSms = async (recipient, message) => {
   console.log(`[SMS] ${recipient.name}(${recipient.phone})님에게 발송 시도...`);
-  // 실제 API 호출 로직이 여기에 들어갑니다.
+  // 실제 API 호출 로직
   // 시뮬레이션: 95% 확률로 성공, 5% 확률로 실패 (네트워크 오류, 스팸 등)
   await new Promise(resolve => setTimeout(resolve, 100)); // 네트워크 딜레이 시뮬레이션
   const isSuccess = Math.random() < 0.95;
@@ -73,7 +73,7 @@ app.post('/api/send-message', async (req, res) => {
   const sentResults = [];
 
   for (const recipient of recipients) {
-    // 1. 카카오톡 먼저 시도
+    // 1. (1순위) 카카오 알림톡을 먼저 시도합니다.
     const kakaoSuccess = await sendKakaoTalk(recipient, message);
 
     if (kakaoSuccess) {
@@ -81,8 +81,8 @@ app.post('/api/send-message', async (req, res) => {
       continue; // 성공했으면 다음 수신자로 넘어감
     }
 
-    // 2. 카카오톡 실패 시 SMS로 재시도
-    console.log(`[Fallback] ${recipient.name}님 카카오톡 실패, SMS로 전환합니다.`);
+    // 2. (Fallback) 알림톡 실패 시, 일반 문자(SMS)로 자동 전환하여 재시도합니다.
+    console.log(`[Fallback] ${recipient.name}님 알림톡 실패, SMS로 전환합니다.`);
     const smsSuccess = await sendSms(recipient, message);
 
     if (smsSuccess) {
