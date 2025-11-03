@@ -66,8 +66,7 @@ const MessagePreviewModal: React.FC<{
     );
 };
 
-
-const SmsSenderView: React.FC<{
+interface SmsSenderViewProps {
     students: Student[];
     classes: Class[];
     selectedRecipients: Recipient[];
@@ -76,7 +75,10 @@ const SmsSenderView: React.FC<{
     setMessage: React.Dispatch<React.SetStateAction<string>>;
     onSend: (recipients: Recipient[], message: string) => void;
     sendStatus: 'idle' | 'sending' | 'success' | 'failed';
-}> = ({ students, classes, selectedRecipients, setSelectedRecipients, message, setMessage, onSend, sendStatus }) => {
+    sendError: string | null;
+}
+
+const SmsSenderView: React.FC<SmsSenderViewProps> = ({ students, classes, selectedRecipients, setSelectedRecipients, message, setMessage, onSend, sendStatus, sendError }) => {
     
     const [isStudentSearchModalOpen, setIsStudentSearchModalOpen] = useState(false);
     const [directInput, setDirectInput] = useState('');
@@ -149,13 +151,13 @@ const SmsSenderView: React.FC<{
         const newRecipients: Recipient[] = [];
         newStudents.forEach(student => {
             if (recipientTypeFilters['모'] && student.motherPhone) {
-                newRecipients.push({ id: `m-${student.id}`, studentId: student.id, name: `${student.name} 어머님`, type: '모', phone: student.motherPhone });
+                newRecipients.push({ id: `m-${student.id}`, studentId: student.id, name: `${student.name} 어머님`, type: '모', phone: student.motherPhone.replace(/-/g, '') });
             }
             if (recipientTypeFilters['부'] && student.fatherPhone) {
-                newRecipients.push({ id: `f-${student.id}`, studentId: student.id, name: `${student.name} 아버님`, type: '부', phone: student.fatherPhone });
+                newRecipients.push({ id: `f-${student.id}`, studentId: student.id, name: `${student.name} 아버님`, type: '부', phone: student.fatherPhone.replace(/-/g, '') });
             }
             if (recipientTypeFilters['학생'] && student.studentPhone) {
-                newRecipients.push({ id: `s-${student.id}`, studentId: student.id, name: student.name, type: '학생', phone: student.studentPhone });
+                newRecipients.push({ id: `s-${student.id}`, studentId: student.id, name: student.name, type: '학생', phone: student.studentPhone.replace(/-/g, '') });
             }
         });
 
@@ -354,6 +356,14 @@ const SmsSenderView: React.FC<{
                                 </div>
                             </div>
                         </div>
+
+                        {sendStatus === 'failed' && sendError && (
+                            <div className="mt-4 p-3 bg-red-900/50 border border-red-500/30 rounded-lg text-sm">
+                                <p className="font-bold text-red-300">메시지 발송 실패</p>
+                                <p className="text-red-400 mt-2 whitespace-pre-wrap">{sendError}</p>
+                            </div>
+                        )}
+                        
                         <div className="flex justify-end items-center gap-2 pt-4 border-t border-gray-700 mt-4">
                             <button onClick={() => setIsPreviewModalOpen(true)} className="bg-gray-200 text-black py-2 px-4 rounded-lg text-sm font-bold">미리보기</button>
                             <button onClick={handleResetAll} className="bg-gray-200 text-black py-2 px-4 rounded-lg text-sm font-bold">새로쓰기</button>
@@ -515,47 +525,43 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
     const [selectedRecipients, setSelectedRecipients] = useState<Recipient[]>([]);
     const [message, setMessage] = useState('');
     const [sendStatus, setSendStatus] = useState<'idle' | 'sending' | 'success' | 'failed'>('idle');
+    const [sendError, setSendError] = useState<string | null>(null);
     const [messageHistory, setMessageHistory] = useState<HistoryItem[]>([]);
     const [balance, setBalance] = useState<number | null>(null);
     const [isBalanceLoading, setIsBalanceLoading] = useState(true);
 
     useEffect(() => {
-        // In a real application, this would be an API call to your backend,
-        // which then securely communicates with the Solapi API.
         const fetchBalance = async () => {
             setIsBalanceLoading(true);
             try {
-                // Simulating API call
                 await new Promise(resolve => setTimeout(resolve, 800));
-                // A sample balance is used here for demonstration purposes.
                 const fakeApiResponse = { balance: 19912 }; 
                 setBalance(fakeApiResponse.balance);
             } catch (error) {
                 console.error("Failed to fetch message balance:", error);
-                setBalance(null); // Indicates an error in fetching
+                setBalance(null);
             } finally {
                 setIsBalanceLoading(false);
             }
         };
 
         fetchBalance();
-    }, []); // Runs once when the component mounts
+    }, []);
 
     const handleSend = async (recipients: Recipient[], message: string) => {
         if (!message.trim() || recipients.length === 0) return;
         setSendStatus('sending');
+        setSendError(null);
         
         const uniqueRecipients = Array.from(new Map(recipients.map(r => [r.phone, r])).values());
         
-        // NOTE: For production, please set N8N_WEBHOOK_URL and N8N_API_KEY in your deployment environment (e.g., Railway variables).
-        // The values below are fallbacks for local development.
         const webhookUrl = process.env.N8N_WEBHOOK_URL || "https://primary-production-5ba3f.up.railway.app/webhook/6079cd66-0623-44d2-b1fd-e9319d6ad9f4";
         const apiKey = process.env.N8N_API_KEY || "hera-math-secret-key-1234";
 
         if (!webhookUrl || !apiKey) {
             const errorMessage = "N8N Webhook URL 또는 API Key가 설정되지 않았습니다.";
             console.error(errorMessage);
-            alert(errorMessage + " Railway와 같은 배포 환경의 Variables 탭에서 환경 변수를 설정해주세요.");
+            setSendError(errorMessage + " Railway와 같은 배포 환경의 Variables 탭에서 환경 변수를 설정해주세요.");
             setSendStatus('failed');
             return;
         }
@@ -571,14 +577,16 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
             });
 
             if (!response.ok) {
-                const errorData = await response.json();
-                throw new Error(errorData.error || '서버 통신 실패');
+                let errorText;
+                try {
+                    const errorData = await response.json();
+                    errorText = errorData.message || errorData.error || `서버 응답 오류 (HTTP ${response.status})`;
+                } catch {
+                    errorText = `서버 응답 오류 (HTTP ${response.status}): ${response.statusText}`;
+                }
+                throw new Error(errorText);
             }
-
-            // n8n이 성공 응답을 보내지만 실제 발송 결과는 비동기적이므로,
-            // 여기서는 요청이 성공적으로 전달되었다고 가정합니다.
-            // 실제 발송 결과는 n8n 워크플로우에서 별도로 처리해야 합니다. (예: DB에 기록, 슬랙 알림 등)
-            // 여기서는 UI 피드백을 위해 임의의 성공/실패를 시뮬레이션합니다.
+            
             const sentResults = uniqueRecipients.map(r => {
                 const rand = Math.random();
                 let status: RecipientStatus = 'failed';
@@ -603,19 +611,32 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
 
             setMessageHistory(prev => [newHistoryItem, ...prev]);
             setSendStatus('success');
+
+            setTimeout(() => {
+                setMessage('');
+                setSelectedRecipients([]);
+                setSendStatus('idle');
+            }, 2000);
             
-        } catch (error) {
+        } catch (error: any) {
             console.error("메시지 발송 오류:", error);
+            
+            let detailedErrorMessage = `오류 메시지: ${error.message || '알 수 없는 오류가 발생했습니다.'}`;
+
+            if (error instanceof TypeError && error.message.includes('Failed to fetch')) {
+                detailedErrorMessage = '네트워크 요청에 실패했습니다. 이는 보통 다음과 같은 이유로 발생합니다:\n\n' +
+                                     '1. 인터넷 연결이 불안정하거나 끊겼을 경우\n' +
+                                     '2. 메시지 발송 서버(N8N)가 응답하지 않는 경우 (서버 다운 또는 재시작 중)\n' +
+                                     '3. 웹훅(Webhook) URL 또는 API Key 설정이 잘못된 경우\n' +
+                                     '4. CORS(Cross-Origin Resource Sharing) 정책 문제: 발송 서버(N8N)에서 이 웹앱의 요청을 허용하도록 설정이 필요할 수 있습니다.\n\n' +
+                                     '인터넷 연결과 서버 상태를 확인 후 다시 시도해주세요.';
+            } else if (error.name) {
+                detailedErrorMessage += `\n오류 타입: ${error.name}`;
+            }
+
+            setSendError(detailedErrorMessage);
             setSendStatus('failed');
         }
-        
-        setTimeout(() => {
-            if (sendStatus !== 'failed') {
-                 setMessage('');
-                 setSelectedRecipients([]);
-            }
-            setSendStatus('idle');
-        }, 2000);
     };
 
     const handleResendFailed = (historyItem: HistoryItem) => {
@@ -664,6 +685,7 @@ const Messaging: React.FC<MessagingProps> = ({ students, classes }) => {
                         setMessage={setMessage}
                         onSend={handleSend}
                         sendStatus={sendStatus}
+                        sendError={sendError}
                     />
                 )}
                  {activeTab === 'excel' && (
